@@ -1,0 +1,51 @@
+<?php
+
+//определяет список возможных прав
+function docviewer_perm() {
+  return array("access docviewer content", "administer docviewer");
+}
+
+//инициализация модуля
+function docviever_init() {
+}
+
+//вывод справки
+function docviewer_help($path, $arg) {
+  $output = '';
+  switch ($path) {
+    case "admin/help#docviewer":
+      $output = '<p>'. t("Display interface for viewing docs (now only pdf)") .'</p>';
+      break;
+  }
+  return $output;
+}
+
+//страница администрирования
+function docviewer_admin() {
+  $form = array();
+  $form['docviewer_header'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Default header'),
+    '#default_value' => variable_get('docviewer_header', 'DocViewer'),
+    '#size' => 20,
+    '#maxlength' => 30,
+    '#description' => t("Default header of document navigator"),
+    '#required' => TRUE,
+  );
+  return system_settings_form($form);
+}
+
+//ссылка в меню
+function docviewer_menu() {
+  $items = array();
+  $items['admin/settings/docviewer'] = array(
+    'title' => t('DocViewer settings'),
+    'description' => t('Settings for DocViewer'),
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('docviewer_admin'),
+    'access arguments' => array('administer docviewer'),
+    'type' => MENU_NORMAL_ITEM,
+  );
+  return $items;
+}
+
