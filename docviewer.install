@@ -1,0 +1,74 @@
+<?php
+/**
+* @file 
+* Install, update and uninstall functions for the docviewer module.
+*/
+
+function docviewer_schema() {
+$schema['docviewer_relations'] = array(
+  'description' => 'Node and documents relations',
+  'fields' => array(
+    'id' => array(
+      'description' => 'Primary key.',
+      'type' => 'serial',
+      'unsigned' => TRUE,
+      'not null' => TRUE),
+    'nid' => array(
+      'description' => 'Node identifier.',
+      'type' => 'int',
+      'unsigned' => TRUE,
+      'not null' => TRUE),
+    'num' => array(
+      'description' => 'Document number in node.',
+      'type' => 'int',
+      'unsigned' => TRUE,
+      'not null' => TRUE),
+    'docid' => array(
+      'description' => 'Document identifier.',
+      'type' => 'int',
+      'unsigned' => TRUE,
+      'not null' => TRUE),
+  ),
+  'unique keys' => array(
+    'id' => array('id'),
+  ),
+  'primary key' => array('id'),
+);
+$schema['docviewer_documents'] = array(
+  'description' => 'Information about documents',
+  'fields' => array(
+    'docid' => array(
+      'description' => 'Document identifier.',
+      'type' => 'serial',
+      'unsigned' => TRUE,
+      'not null' => TRUE),
+    'filename' => array(
+      'description' => 'Source filename.',
+      'type' => 'varchar',
+      'length' => 50,
+      'not null' => TRUE),
+    'pages' => array(
+      'description' => 'Pages count in document.',
+      'type' => 'int',
+      'unsigned' => TRUE,
+      'not null' => TRUE),
+    'load_date' => array(
+      'description' => 'Document load date.',
+      'type' => 'datetime',
+      'not null' => TRUE),
+  ),
+  'unique keys' => array(
+    'docid' => array('docid'),
+  ),
+  'primary key' => array('docid'),
+);
+return $schema;
+}
+
+function docviewer_install() {
+  drupal_install_schema('docviewer');
+}
+
+function docviewer_uninstall() {
+  drupal_uninstall_schema('docviewer');
+}
