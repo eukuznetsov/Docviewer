@@ -1,0 +1,4 @@
+<?php
+//файл с настройками модуля
+$GLOBALS['source_dir'] = "docviewer_source";
+$GLOBALS['cache_dir'] ="docviewer_cache";

@@ -1,12 +1,23 @@
 <?php
+require_once('docviewer.cfg');
 
 //определяет список возможных прав
 function docviewer_perm() {
-  return array("access docviewer content", "administer docviewer");
+  return array("access docviewer content", "administer docviewer", "access docviewer source", "create docviewer nodes", "edit docviewer nodes");
 }
 
 //инициализация модуля
 function docviever_init() {
+}
+
+//определение доступа к функциям
+function docviewer_access($op, $node, $account) {
+  if ($op == 'create') {
+    return user_access('create docviewer nodes', $account);
+  }
+  if ($op == 'update' || $op == 'delete') {
+    return user_access('edit docviewer nodes', $account);
+  }
 }
 
 //вывод справки
@@ -46,6 +57,108 @@ function docviewer_menu() {
     'access arguments' => array('administer docviewer'),
     'type' => MENU_NORMAL_ITEM,
   );
+  $items['admin/content/docviewer'] = array(
+    'title' => t('DocViewer documents'),
+    'description' => t('Add and delete documents from list'),
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('docviewer_upload'),
+    'access arguments' => array('administer docviewer'),
+    'type' => MENU_NORMAL_ITEM,
+  );
   return $items;
 }
 
+//создание типа публикации
+function docviewer_node_info() {
+  return array(
+    'docviewer_page' => array(
+      'name' => t('page with document'),
+      'module' => 'docviewer',
+      'description' => "This is node with online viewer.",
+    )
+  );
+}
+
+//формы при создании новой публикации
+function docviewer_form(&$node, $form_state) {
+  $type = node_get_types('type', $node);
+  $form['title'] = array(
+    '#type' => 'textfield',
+    '#title' => check_plain($type->title_label),
+    '#required' => TRUE,
+    '#default_value' => $node->title,
+    '#weight' => -5,
+  );
+  $form['body_filter']['body'] = array(
+    '#type' => 'textarea',
+    '#title' => t('Description of documents'),
+    '#default_value' => $node->body,
+    '#required' => FALSE,
+  );
+  $form['doc'] = docviewer_upload();
+  return $form;
+}
+
+//формы
+//загрузка файла на сервер
+function docviewer_upload() {
+  global $user;
+  //Администратор может загружать любые файлы. Проверки отключаются
+  if ($user->uid == 1) {
+    drupal_set_message("You are login as admin. File validation off.", "warning");
+  }
+  $form = array();
+  //если условие выполняется значит была попытка загрузить файл больше разрешенного размера
+  if (($_SERVER['CONTENT_LENGTH'])&&(parse_size(ini_get("post_max_size")) < $_SERVER['CONTENT_LENGTH'])) {
+    drupal_set_message(t("File size is larger than allowed."), 'error');
+  }
+  $form['#attributes'] = array('enctype' => "multipart/form-data");
+  $form['upload'] = array(
+    '#type' => 'file',
+    '#title' => t('Upload document'),
+    '#size' => 22,
+    '#weight' => 0,
+  );
+  $form['max_filesize'] = array(
+    '#type' => 'markup',
+    '#value' => "<b>Max file size:</b> ". (file_upload_max_size()/1024/1024) .'MB<br>',
+  );
+  $form['submit'] = array(
+    '#type' => 'submit',
+    '#value' => t('Save document'),
+  );
+  return $form;
+}
+
+function docviewer_upload_validate($form, &$form_state) {
+}
+
+//обработка данных из формы docviewer_upload
+//TODO:AJAX, перенаправление на страницу с прогрессбаром
+//TODO:вывод причины ошибки загрузки(размер превышает максимально допустимый)
+function docviewer_upload_submit($form, &$form_state) {
+  global $_source_dir;
+  $validators = array(
+    "file_validate_extensions" => array('pdf'),
+  );
+  $dest = file_directory_path() .'/'. $_source_dir;
+  if (!file_check_directory($dest, FILE_CREATE_DIRECTORY)) {
+    form_set_error(t("Can't create directory for file"));
+  }
+  $file = file_save_upload('upload', $validators, $dest);
+  if ($file != 0) {
+    drupal_set_message("File " .check_plain($file->filename). " succesfull upload.");
+  }
+  else {
+    form_set_error('docviewer_upload', t("Failed to save the file"));
+  }
+}
+
+//
+
+//вывод списка доступных файлов на сервере
+function docviewer_list() {
+  $form = array();
+  //заглушка
+  return $form;
+}

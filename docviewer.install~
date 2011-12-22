@@ -1,4 +1,9 @@
 <?php
+/**
+* @file 
+* Install, update and uninstall functions for the docviewer module.
+*/
+require_once('docviewer.cfg');
 
 function docviewer_schema() {
 $schema['docviewer_relations'] = array(
@@ -62,6 +67,15 @@ return $schema;
 }
 
 function docviewer_install() {
+  $file_directory = file_directory_path();
+  $source_directory = "$file_directory/$_source_path";
+  $cache_directory = "$file_directory/$_cache_path";
+  if (!file_check_directory($source_directory, FILE_CREATE_DIRECTORY)) {
+    drupal_set_message(check_plain("Can't create directory". $source_directory), 'error');
+  }
+  if (!file_check_directory($cache_directory, FILE_CREATE_DIRECTORY)) {
+    drupal_set_message(check_plain("Can't create directory". $cache_directory), 'error');
+  }
   drupal_install_schema('docviewer');
 }
 

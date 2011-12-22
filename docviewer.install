@@ -3,6 +3,7 @@
 * @file 
 * Install, update and uninstall functions for the docviewer module.
 */
+require_once('docviewer.cfg');
 
 function docviewer_schema() {
 $schema['docviewer_relations'] = array(
@@ -38,27 +39,38 @@ $schema['docviewer_documents'] = array(
   'description' => 'Information about documents',
   'fields' => array(
     'docid' => array(
-      'description' => 'Document identifier.',
+      'description' => 'The document identifier.',
       'type' => 'serial',
       'unsigned' => TRUE,
       'not null' => TRUE),
     'filename' => array(
-      'description' => 'Source filename.',
+      'description' => 'The document filename.',
       'type' => 'varchar',
       'length' => 50,
       'not null' => TRUE),
     'pages' => array(
-      'description' => 'Pages count in document.',
+      'description' => 'Pages count in the document.',
       'type' => 'int',
       'unsigned' => TRUE,
       'not null' => TRUE),
-    'load_date' => array(
-      'description' => 'Document load date.',
+    'upload_date' => array(
+      'description' => 'The document upload date.',
       'type' => 'datetime',
       'not null' => TRUE),
+    'uid' => array(
+      'description' => 'User to upload the document.',
+      'type' => 'int',
+      'unsigned' => TRUE,
+      'not null' => TRUE),
+    'md5sum' => array(
+      'description' => 'The document MD5 summ.',
+      'type' => 'int',
+      'unsigned' => TRUE,
+        'not null' => TRUE),
   ),
   'unique keys' => array(
     'docid' => array('docid'),
+    'md5sum' => array('md5sum'),
   ),
   'primary key' => array('docid'),
 );
@@ -66,6 +78,15 @@ return $schema;
 }
 
 function docviewer_install() {
+  $file_directory = file_directory_path();
+  $source_directory = "$file_directory/$_source_path";
+  $cache_directory = "$file_directory/$_cache_path";
+  if (!file_check_directory($source_directory, FILE_CREATE_DIRECTORY)) {
+    drupal_set_message(check_plain("Can't create directory". $source_directory), 'error');
+  }
+  if (!file_check_directory($cache_directory, FILE_CREATE_DIRECTORY)) {
+    drupal_set_message(check_plain("Can't create directory". $cache_directory), 'error');
+  }
   drupal_install_schema('docviewer');
 }
 
