@@ -55,7 +55,8 @@ $schema['docviewer_documents'] = array(
       'not null' => TRUE),
     'upload_date' => array(
       'description' => 'The document upload date.',
-      'type' => 'datetime',
+      'type' => 'int',
+      'unsigned' => TRUE,
       'not null' => TRUE),
     'uid' => array(
       'description' => 'User to upload the document.',
@@ -64,9 +65,14 @@ $schema['docviewer_documents'] = array(
       'not null' => TRUE),
     'md5sum' => array(
       'description' => 'The document MD5 summ.',
-      'type' => 'int',
-      'unsigned' => TRUE,
-        'not null' => TRUE),
+      'type' => 'varchar',
+      'length' => 32,
+      'not null' => TRUE),
+    'filesize' => array(
+     'description' => 'Filesize in bytes.',
+     'type' => 'int',
+     'not null' => TRUE,
+     'unsigned' => TRUE),
   ),
   'unique keys' => array(
     'docid' => array('docid'),
@@ -90,6 +96,7 @@ function docviewer_install() {
   drupal_install_schema('docviewer');
 }
 
+//TODO:Delete folders?
 function docviewer_uninstall() {
   drupal_uninstall_schema('docviewer');
 }

@@ -135,26 +135,52 @@ function docviewer_upload_validate($form, &$form_state) {
 
 //обработка данных из формы docviewer_upload
 //TODO:AJAX, перенаправление на страницу с прогрессбаром
-//TODO:вывод причины ошибки загрузки(размер превышает максимально допустимый)
+//TODO:learn drupal path build function, and rewrite function
+//TODO:check mimetype
 function docviewer_upload_submit($form, &$form_state) {
   global $_source_dir;
+  global $_cache_dir;
+  global $user;
   $validators = array(
     "file_validate_extensions" => array('pdf'),
   );
   $dest = file_directory_path() .'/'. $_source_dir;
+  //проверка директории для сохранения
   if (!file_check_directory($dest, FILE_CREATE_DIRECTORY)) {
     form_set_error(t("Can't create directory for file"));
   }
-  $file = file_save_upload('upload', $validators, $dest);
-  if ($file != 0) {
-    drupal_set_message("File " .check_plain($file->filename). " succesfull upload.");
-  }
-  else {
-    form_set_error('docviewer_upload', t("Failed to save the file"));
+  else{
+    $file = file_save_upload('upload', $validators, $dest);
+    if ($file != 0) {
+      $md5sum = md5_file($dest .'/'. $file->filename);
+      $result = db_query("SELECT md5sum FROM {docviewer_documents} WHERE md5sum=%d", $md5sum);
+      if ($result->field_count){
+          form_set_error('upload', t("File already exists"));
+      }
+      else{
+        $cache_folder = file_directory_path() ."/". $_cache_dir ."/". $md5sum; 
+        if (!file_check_directory($cache_folder, FILE_CREATE_DIRECTORY)) {
+          form_set_error('upload', "Failed create cache files folder.");
+        }
+        else{
+          $pages = _docviewer_caching_document($dest ."/". $file->filename, $cache_folder);
+          if ($pages > 0) {
+            drupal_set_message("File ". check_plain($file->filename) ." succesfull upload.");
+            if (!db_query("INSERT INTO {docviewer_documents} (filename, pages, md5sum, uid, upload_date, filesize) VALUES('%s', '%d', '%s', '%d', '%d', '%d');", $file->filename, $pages, $md5sum, $user->uid, $file->timestamp, $file->filesize)) {
+              form_set_error('upload', t("Insert into database failed."));
+            } 
+          }
+          else{
+            form_set_error('upload',t("Read 0 pages. Document reading fail."));
+          }
+        }
+      }
+    }
+    else {
+      form_set_error('upload', t("Failed to save the file"));
+    }
   }
 }
-
-//
 
 //вывод списка доступных файлов на сервере
 function docviewer_list() {
@@ -162,3 +188,14 @@ function docviewer_list() {
   //заглушка
   return $form;
 }
+
+//make cache for document. return page count of document
+//TODO: add check with "is_dir"
+function _docviewer_caching_document($doc, $cache_folder) {
+  $files = array();
+  //drupal_set_message("System function exec. ". realpath($doc) ." ". realpath($cache_folder), "warning");
+  exec("pdftoppm -jpeg '". realpath($doc) ."' '". realpath($cache_folder) ."/page'");
+  $files = file_scan_directory($cache_folder, "^page{1}-[0-9]+\.jpg$");
+  return count($files);
+}
+
