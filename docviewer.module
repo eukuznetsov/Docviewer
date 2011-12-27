@@ -60,7 +60,7 @@ function docviewer_menu() {
     'access arguments' => array('administer docviewer'),
     'type' => MENU_NORMAL_ITEM,
   );
-  $items['doc/%/%'] = array(
+  $items['books/%'] = array(
     'page callback' => '_document_get_page',
     'page arguments' => array(1, 2),
     'type' => MENU_CALLBACK,
@@ -142,10 +142,33 @@ function docviewer_upload_form() {
 //TODO:learn drupal path build function, and rewrite function
 //TODO:check mimetype
 function docviewer_upload_form_submit($form, &$form_state) {
+  //begin transaction
+  $file = _docviewer_upload_doc($form, $form_state); 
+  switch($file['error']){
+    case 0: break;
+    case 1: break;
+    case 4:
+      unlink($file['source_by_id']);
+    case 3:
+      _rm($file['cache_dir']);
+    case 2: 
+      unlink($file['source_file']);
+  }
+}
+
+//TODO: move all variables in array 'status'
+//upload document
+//return:
+//0 - succesfull
+//1 - error without actions
+//2 - save file
+//3 - create cash-folder
+//4 - rename document
+function _docviewer_upload_doc($form, &$form_state){
   global $_source_dir;
   global $_cache_dir;
   global $user;
-  $file_ext = "pdf";
+  $status = array();
   $validators = array(
     "file_validate_extensions" => array('pdf'),
   );
@@ -154,66 +177,83 @@ function docviewer_upload_form_submit($form, &$form_state) {
   //проверка директории для сохранения
   if (!file_check_directory($dest, FILE_CREATE_DIRECTORY)) {
     form_set_error('upload', t("Can't create directory for file"));
-    return 1;
+    $status['error'] = 1;
+    return $status;
   }
   if (!file_check_directory($cache, FILE_CREATE_DIRECTORY)) {
     form_set_error('upload', t("Can't create directory for file"));
-    return 1;
+    $status['error'] = 1;
+    return $status;
   }
   $file = file_save_upload('upload', $validators, $dest);
   //не удалось сохранить файл
   if ($file == 0) {
     form_set_error('upload', t("File saving fail."));
-    return 1;
+    $status['error'] = 1;
+    return $status;
   }
-  $filepath = $dest .'/'. $file->filename;
-  $md5sum = md5_file($filepath);
+  $status['source_file'] = $file->filepath;
+  $md5sum = md5_file($file->filepath);
+  $status['md5sum'] = $md5sum;
   $result = db_query("SELECT * FROM {docviewer_documents} WHERE md5sum='%s'", $md5sum);
   if ($result->num_rows) {
     form_set_error('upload', t("File already exists"));
-    return 1;
+    $status['error'] = 2;
+    return $status;
   }
   $cache_folder = file_directory_path() ."/". $_cache_dir ."/". $md5sum; 
+  $status['cache_dir'] = $cache_folder;
   //не удалось создать папку для кэша
   if (!file_check_directory($cache_folder, FILE_CREATE_DIRECTORY)) {
     form_set_error('upload', "Failed create cache files folder.");
-    return 1;
+    return 2;
   }
-  $pages = _docviewer_caching_document($filepath, $cache_folder);
+  $pages = _docviewer_caching_document($file->filepath, $cache_folder);
   //Изображений не создано
   if ($pages <= 0) {
     form_set_error('upload', t("Document reading fail."));
-    return 1;
+    $status['error'] = 3; 
+    return $status;
   }
   //Не удалось добавить информацию о файле в базу
   if (!db_query("INSERT INTO {docviewer_documents} (filename, pages, md5sum, uid, upload_date, filesize) VALUES('%s', '%d', '%s', '%d', '%d', '%d')", $file->filename, $pages, $md5sum, $user->uid, $file->timestamp, $file->filesize)) {
     form_set_error('upload', t("Insert in database failed."));
-    return 1;
+    $status['error'] = 3; 
+    return $status;
   }
   $result = db_query("SELECT docid FROM {docviewer_documents} WHERE md5sum='%s'", $md5sum);
   //не удалось узнать id только что созданного документа
   if (!$result) {
     form_set_error('upload', t("Database error."));
-    return 1;
+    $status['error'] = 3; 
+    return $status;
   }
   $result = db_fetch_object($result);
   $source_move = $dest ."/". $result->docid; 
-  //перенос документа в его папку по id
-  if (!file_move($filepath, $dest ."/". $result->docid .".". $file_ext, FILE_EXISTS_ERROR)) {
-    form_set_error('upload', t('Unable to transfer document'));
+  //rename doc by id
+  if (!rename($file->filepath, $source_move)) {
+    form_set_error('upload', t('Rename document fail.'));
+    $status['error'] = 4; 
+    return $status;
   }
+  $status['source_by_id'] = $source_move;
   $cache_move = file_directory_path() .'/'. $_cache_dir .'/'. $result->docid;
   //переименование папки с кэшем
-  rename($cache_folder, $cache_move);
+  if (!rename($cache_folder, $cache_move)) {
+    form_set_error('upload', t("Rename cache folder fail. From '$cache_folder' to '$cache_move'. "));
+    $status['error'] = 3; 
+    return $status;
+  }
   drupal_set_message("File ". check_plain($file->filename) ." succesfull upload.");
+  return 0;
 }
 
 //make cache for document. return page count of document
 //TODO: add check with "is_dir"
 function _docviewer_caching_document($doc, $cache_folder) {
   $files = array();
-  exec("pdftoppm -jpeg '". realpath($doc) ."' '". realpath($cache_folder) ."/page'");
-  $files = file_scan_directory($cache_folder, "^page{1}-[0-9]+\.jpg$");
+  exec("pdftoppm -png '". realpath($doc) ."' '". realpath($cache_folder) ."/page'");
+  $files = file_scan_directory($cache_folder, "^page{1}-[0-9]+\.png$");
   return count($files);
 }
 
@@ -260,7 +300,6 @@ function docviewer_delete_confirm_submit($form, &$form_state) {
   global $_source_dir;
   global $_cache_dir;
   $id = $form_state['values']['docid'];
-  drupal_set_message("DOCID: ". $id);
   if (!db_query("DELETE FROM {docviewer_documents} WHERE docid=%d", $id)) {
     drupal_set_message(t("Delete document $id from database failed."), "error");
   }
@@ -293,7 +332,11 @@ function docviewer_document_load($id) {
 
 function _document_get_page($id, $page) {
   global $_cache_dir;
+  $result = db_fetch_object(db_query("SELECT pages FROM {docviewer_documents} WHERE docid='%d'", $id));
   $output = "";
-  $output .= "<img src=\"". file_create_url(file_directory_path() ."/". $_cache_dir ."/". $id ."/page-". $page .".jpg") ."\"/>";
+  $zeros = "";
+  //only for pdftoppm numaration
+  for ($i=0; $i<strlen($result->pages)-strlen($page);$i++) $zeros .= "0";
+  $output .= "<img src=\"". file_create_url(file_directory_path() ."/". $_cache_dir ."/". $id ."/page-". $zeros . $page .".png") ."\"/>";
   return $output;
 } 
