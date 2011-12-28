@@ -141,11 +141,14 @@ function docviewer_upload_form() {
 //TODO:AJAX, перенаправление на страницу с прогрессбаром
 //TODO:learn drupal path build function, and rewrite function
 //TODO:check mimetype
+//TODO:add checks
 function docviewer_upload_form_submit($form, &$form_state) {
   //begin transaction
   $file = _docviewer_upload_doc($form, $form_state); 
   switch($file['error']){
-    case 0: break;
+    case 0: 
+      db_query("UPDATE {docviewer_documents} SET active=1 WHERE md5sum='%s'", $file['md5sum']); 
+      break;
     case 1: break;
     case 4:
       unlink($file['source_by_id']);
@@ -245,7 +248,8 @@ function _docviewer_upload_doc($form, &$form_state){
     return $status;
   }
   drupal_set_message("File ". check_plain($file->filename) ." succesfull upload.");
-  return 0;
+  $status['error'] = 0;
+  return $status;
 }
 
 //make cache for document. return page count of document
@@ -261,7 +265,7 @@ function _docviewer_caching_document($doc, $cache_folder) {
 function docviewer_edit_list() {
   $output = "";
   $output .= drupal_get_form("docviewer_upload_form");
-  $query = db_query("SELECT docid, filename, filesize, pages FROM {docviewer_documents}");
+  $query = db_query("SELECT docid, filename, filesize, pages FROM {docviewer_documents} WHERE active=1");
   $header = array('Id', t('Filename'), t('Size'), t('Pages'), t('Actions')); 
   $data = array();
   while ($row = db_fetch_object($query)) {
