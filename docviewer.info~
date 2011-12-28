@@ -1,4 +1,0 @@
-; $Id$
-name = DocViewer
-description = Display document on page
-core = 6.x

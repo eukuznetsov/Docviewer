@@ -73,6 +73,12 @@ $schema['docviewer_documents'] = array(
      'type' => 'int',
      'not null' => TRUE,
      'unsigned' => TRUE),
+    'active' => array(
+      'type' => 'int',
+      'description' => 'Processing status.',
+      'not null' => TRUE,
+      'unsigned' => TRUE,
+      'default' => 0),
   ),
   'unique keys' => array(
     'docid' => array('docid'),

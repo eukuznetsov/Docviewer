@@ -60,11 +60,11 @@ function docviewer_menu() {
     'access arguments' => array('administer docviewer'),
     'type' => MENU_NORMAL_ITEM,
   );
-  $items['books/%'] = array(
-    'page callback' => '_document_get_page',
-    'page arguments' => array(1, 2),
+  $items['books/%user_uid_optional/%docviewer_document/%'] = array(
+    'page callback' => 'docviewer_get_page',
+    'page arguments' => array(1, 2, 3),
     'type' => MENU_CALLBACK,
-    'access arguments' => array('administer docviewer'),
+    'access arguments' => array('access docviewer content'),
   );
   $items['docviewer/%docviewer_document/delete'] = array(
     'title' => t('Delete document'),
@@ -143,15 +143,15 @@ function docviewer_upload_form() {
 //TODO:check mimetype
 //TODO:add checks
 function docviewer_upload_form_submit($form, &$form_state) {
-  //begin transaction
   $file = _docviewer_upload_doc($form, $form_state); 
-  switch($file['error']){
+  switch ($file['error']) {
     case 0: 
       db_query("UPDATE {docviewer_documents} SET active=1 WHERE md5sum='%s'", $file['md5sum']); 
       break;
     case 1: break;
     case 4:
       unlink($file['source_by_id']);
+      db_query("DELETE FROM {docviewer_documents} WHERE md5sum='%s'", $file['md5sum']);
     case 3:
       _rm($file['cache_dir']);
     case 2: 
@@ -167,7 +167,7 @@ function docviewer_upload_form_submit($form, &$form_state) {
 //2 - save file
 //3 - create cash-folder
 //4 - rename document
-function _docviewer_upload_doc($form, &$form_state){
+function _docviewer_upload_doc($form, &$form_state) {
   global $_source_dir;
   global $_cache_dir;
   global $user;
@@ -257,8 +257,11 @@ function _docviewer_upload_doc($form, &$form_state){
 function _docviewer_caching_document($doc, $cache_folder) {
   $files = array();
   exec("pdftoppm -png '". realpath($doc) ."' '". realpath($cache_folder) ."/page'");
-  $files = file_scan_directory($cache_folder, "^page{1}-[0-9]+\.png$");
-  return count($files);
+  $file = file_scan_directory($cache_folder, "^page{1}-[0-9]+\.png$");
+  foreach ($file as $value) {
+    if(_docviewer_resize($value->filename, 750, 0)) drupal_set_message("Resize file $value->basename failed.");
+  }
+  return count($file);
 }
 
 //страница редактирования списка файлов
@@ -321,6 +324,7 @@ function docviewer_delete_confirm(&$form_state, $doc) {
   );
   return confirm_form($form,
     'Вы действительно хотите удалить документ <i>' . check_plain($doc->filename) . '</i>?',
+
     'docviewer',
     'Эта операция не обратима',
     'Удалить',
@@ -330,17 +334,45 @@ function docviewer_delete_confirm(&$form_state, $doc) {
 
 //проверка существования документа
 function docviewer_document_load($id) {
-  $result = db_query("SELECT * FROM {docviewer_documents} WHERE docid=%d", $id);
+  $result = db_query("SELECT * FROM {docviewer_documents} WHERE docid=%d AND active=1", $id);
   return db_fetch_object($result);
 }
 
-function _document_get_page($id, $page) {
+//return the $page page of document with id=$docid 
+//TODO:check host of the document
+function docviewer_get_page($uid, $doc, $page) {
   global $_cache_dir;
-  $result = db_fetch_object(db_query("SELECT pages FROM {docviewer_documents} WHERE docid='%d'", $id));
   $output = "";
-  $zeros = "";
-  //only for pdftoppm numaration
-  for ($i=0; $i<strlen($result->pages)-strlen($page);$i++) $zeros .= "0";
-  $output .= "<img src=\"". file_create_url(file_directory_path() ."/". $_cache_dir ."/". $id ."/page-". $zeros . $page .".png") ."\"/>";
-  return $output;
+  if (preg_match("/^page-0*([0-9]+)/i", $page, $matches) == 1){
+    $page = $matches[1][0];
+    $zeros = "";
+    for ($i = 0; $i<(strlen($doc->pages)-strlen($page)); $i++) $zeros .= "0";
+      if (($page <= $doc->pages)&&($page > 0)) {
+        header ("Content-Type: image/png");
+        readfile(realpath(file_directory_path() ."/". $_cache_dir ."/". $doc->docid ."/page-". $zeros . $page .".png"));
+      }
+  }
+  drupal_goto();
 } 
+
+//resize image (create only smaller picture). if width or height is 0 then it set auto (by ratio)
+//0 - succesfull
+//1 - error
+function _docviewer_resize($path, $width, $height) {
+  if ((!width)&&(!height)) return 1;
+  if (!file_exists($path)) return 1;
+  $file = getimagesize($path);
+  if (($file === FALSE)||($file[0] < $width)||($file[1] < $height)) return 1;
+  $format = strtolower(substr($file['mime'], strpos($file['mime'], '/')+1)); 
+  if ($format != "png") return 1;
+  $src = imagecreatefrompng($path);
+  if ($height == 0) $height = floor($width*$file[1]/$file[0]);
+  if ($width == 0) $width = floor($height*$file[0]/$file[1]);
+  $dest = imagecreatetruecolor($width, $height);
+  imagecopyresampled($dest, $src, 0, 0, 0, 0, $width, $height, $file[0], $file[1]);
+  imagepng($dest, $path);
+  imagedestroy($dest);
+  imagedestroy($src);
+  return 0;
+}
+  
