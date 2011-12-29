@@ -3,7 +3,7 @@ require_once('docviewer.cfg');
 
 //определяет список возможных прав
 function docviewer_perm() {
-  return array("read books", "download books", "add books", "delete own books",  "administer docviewer");
+  return array("read books", "download books", "add books", "delete own books",  "administer docviewer", "see list of books");
 }
 
 //определение доступа к функциям
@@ -64,8 +64,15 @@ function docviewer_menu() {
     'title' => t('Documents'),
     'description' => t('Documents list'),
     'page callback' => 'docviewer_list',
-    'access arguments' => array('read books'),
+    'page arguments' => array(), 
+    'access arguments' => array('see list of books'),
     'type' => MENU_NORMAL_ITEM,
+  );
+  $items['books/%user_uid_optional'] = array(
+    'page callback' => 'docviewer_list',
+    'page arguments' => array(1),
+    'type' => MENU_CALLBACK,
+    'access arguments' => array('see list of books'),
   );
   $items['books/%user_uid_optional/%docviewer_document/%'] = array(
     'page callback' => 'docviewer_get_page',
@@ -382,15 +389,19 @@ function _docviewer_resize($path, $width, $height) {
   return 0;
 }
   
-function docviewer_list() {
+function docviewer_list($uid = FALSE) {
   global $user;
   $output = "";
-  if (user_access('add books')||user_access('administer docviewer'))
-    $output .= drupal_get_form("docviewer_upload_form");
-  if (user_access('read books')||user_access('download books')||user_access('administer docviewer'))
-    $query = db_query("SELECT docid, filename, filesize, pages, uid FROM {docviewer_documents} WHERE active=1");
-  if (!(user_access('read books')&&user_access('download books')&&user_access('administer docviewer'))&&(user_access('add books')||user_access('delete own books')))
-    $query = db_query("SELECT docid, filename, filesize, pages, uid FROM {docviewer_documents} WHERE active=1 AND uid=%d", $user->uid);
+  if (user_access('add books')||user_access('administer docviewer')) $output .= drupal_get_form("docviewer_upload_form");
+  if ($uid == FALSE) {
+    if (user_access('read books')||user_access('download books')||user_access('administer docviewer')) $query = db_query("SELECT docid, filename, filesize, pages, uid FROM {docviewer_documents} WHERE active=1");
+    if (!(user_access('read books')&&user_access('download books')&&user_access('administer docviewer'))&&(user_access('add books')||user_access('delete own books'))) $query = db_query("SELECT docid, filename, filesize, pages, uid FROM {docviewer_documents} WHERE active=1 AND uid=%d", $user->uid);
+  }
+  else {
+    if (is_numeric($uid)) {
+      db_query();
+    }
+  }
   $header = array('Id', t('Filename'), t('User'), t('Size'), t('Pages'), t('Actions')); 
   $data = array();
   while ($row = db_fetch_object($query)) {
