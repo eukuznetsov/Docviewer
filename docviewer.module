@@ -3,7 +3,7 @@ require_once('docviewer.cfg');
 
 //определяет список возможных прав
 function docviewer_perm() {
-  return array("access docviewer content", "administer docviewer", "access docviewer source", "create docviewer nodes", "edit docviewer nodes");
+  return array("read books", "download books", "add books", "delete own books",  "administer docviewer");
 }
 
 //определение доступа к функциям
@@ -54,10 +54,17 @@ function docviewer_menu() {
     'type' => MENU_NORMAL_ITEM,
   );
   $items['admin/content/docviewer'] = array(
-    'title' => t('DocViewer documents'),
+    'title' => t('Manage Docviewer list.'),
     'description' => t('Add and delete documents from list'),
     'page callback' => 'docviewer_edit_list',
     'access arguments' => array('administer docviewer'),
+    'type' => MENU_NORMAL_ITEM,
+  );
+  $items['books'] = array(
+    'title' => t('Documents'),
+    'description' => t('Documents list'),
+    'page callback' => 'docviewer_list',
+    'access arguments' => array('read books'),
     'type' => MENU_NORMAL_ITEM,
   );
   $items['books/%user_uid_optional/%docviewer_document/%'] = array(
@@ -376,3 +383,26 @@ function _docviewer_resize($path, $width, $height) {
   return 0;
 }
   
+function docviewer_list() {
+  global $user;
+  if (user_access('add books')||user_access('administer docviewer'))
+   $output .= drupal_get_form("docviewer_upload_form");
+  $query = db_query("SELECT docid, filename, filesize, pages, uid FROM {docviewer_documents} WHERE active=1");
+  $header = array('Id', t('Filename'), t('User'), t('Size'), t('Pages'), t('Actions')); 
+  $data = array();
+  while ($row = db_fetch_object($query)) {
+    if ((($user->uid == $row->uid)&&user_access('delete own books'))||user_access('administer books'))
+      $actions = l(t(delete), 'docviewer/'. $row->docid .'/delete', array('alias' => TRUE)); 
+    $data[] = array(
+      $row->docid,
+      $row->filename,
+      $row->uid,
+      $row->filesize,
+      $row->pages,
+      $actions,
+    );
+  }
+  $output .= theme_table($header, $data);
+  return $output; 
+  return 0;
+} 
