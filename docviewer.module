@@ -343,8 +343,8 @@ function docviewer_document_load($id) {
 function docviewer_get_page($uid, $doc, $page) {
   global $_cache_dir;
   $output = "";
-  if (preg_match("/^page-0*([0-9]+)/i", $page, $matches) == 1){
-    $page = $matches[1][0];
+  if (preg_match("/^page-0*([0-9]+)$/i", $page, $matches) == 1){
+    $page = $matches[1];
     $zeros = "";
     for ($i = 0; $i<(strlen($doc->pages)-strlen($page)); $i++) $zeros .= "0";
       if (($page <= $doc->pages)&&($page > 0)) {
