@@ -77,7 +77,7 @@ function docviewer_menu() {
     'title' => t('Delete document'),
     'page callback' => 'drupal_get_form',
     'page arguments' => array('docviewer_delete_confirm', 1),
-    'access arguments' => array('administer docviewer'),
+    'access callback' => 'docviewer_delete_document',
     'type' => MENU_CALLBACK,
   );
   return $items;
@@ -320,7 +320,7 @@ function docviewer_delete_confirm_submit($form, &$form_state) {
   _rm(file_directory_path() ."/". $_source_dir ."/". $id); 
   _rm(file_directory_path() ."/". $_cache_dir ."/". $id); 
   drupal_set_message(check_plain(t('Document succesfull delete')));
-  drupal_goto('admin/content/docviewer');
+  $form_state['redirect'] = "books/"; 
 }
 
 //форма подтверждения удаления
@@ -329,14 +329,13 @@ function docviewer_delete_confirm(&$form_state, $doc) {
     '#type' => 'value',
     '#value' => $doc->docid,
   );
-  return confirm_form($form,
-    'Вы действительно хотите удалить документ <i>' . check_plain($doc->filename) . '</i>?',
-
-    'docviewer',
-    'Эта операция не обратима',
-    'Удалить',
-    'Отменить'
-  );
+  //if (user_access('administer docviewer')||(user_access('delete_own_documents')&&($doc-uid == $user->uid))) {
+    //return confirm_form($form, t("Are you sure you want to delete the revision <i>") . check_plain($doc->filename) . '</i>?', 'docviewer', t('This action cannot be undone.'), t('Delete'), t('Cancel') );
+  //}
+  //else {
+  drupal_set_message("You haven't permission to delete this document.", "error");
+  drupal_goto("books");
+  //}
 }
 
 //проверка существования документа
@@ -385,9 +384,13 @@ function _docviewer_resize($path, $width, $height) {
   
 function docviewer_list() {
   global $user;
+  $output = "";
   if (user_access('add books')||user_access('administer docviewer'))
     $output .= drupal_get_form("docviewer_upload_form");
-  $query = db_query("SELECT docid, filename, filesize, pages, uid FROM {docviewer_documents} WHERE active=1");
+  if (user_access('read books')||user_access('download books')||user_access('administer docviewer'))
+    $query = db_query("SELECT docid, filename, filesize, pages, uid FROM {docviewer_documents} WHERE active=1");
+  if (!(user_access('read books')&&user_access('download books')&&user_access('administer docviewer'))&&(user_access('add books')||user_access('delete own books')))
+    $query = db_query("SELECT docid, filename, filesize, pages, uid FROM {docviewer_documents} WHERE active=1 AND uid=%d", $user->uid);
   $header = array('Id', t('Filename'), t('User'), t('Size'), t('Pages'), t('Actions')); 
   $data = array();
   while ($row = db_fetch_object($query)) {
@@ -404,5 +407,10 @@ function docviewer_list() {
   }
   $output .= theme_table($header, $data);
   return $output; 
-  return 0;
 } 
+
+//access check documents
+function docviewer_delete_document() {
+  if (user_access('administer docviewer')||user_access('delete own books')) return TRUE;
+  return FALSE;
+}
