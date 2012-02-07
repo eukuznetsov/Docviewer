@@ -3,7 +3,7 @@ require_once('docviewer.cfg');
 
 //определяет список возможных прав
 function docviewer_perm() {
-  return array("read books", "download books", "add books", "delete own books",  "administer docviewer", "see list of books");
+  return array("read books", "download books", "add books", "delete own books",  "administer docviewer", "see list of books", "create nodes");
 }
 
 //определение доступа к функциям
