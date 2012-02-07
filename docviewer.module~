@@ -3,7 +3,7 @@ require_once('docviewer.cfg');
 
 //определяет список возможных прав
 function docviewer_perm() {
-  return array("read books", "download books", "add books", "delete own books",  "administer docviewer");
+  return array("read books", "download books", "add books", "delete own books",  "administer docviewer", "see list of books");
 }
 
 //определение доступа к функциям
@@ -65,20 +65,20 @@ function docviewer_menu() {
     'description' => t('Documents list'),
     'page callback' => 'docviewer_list',
     'page arguments' => array(), 
-    'access arguments' => array('read books'),
+    'access arguments' => array('see list of books'),
     'type' => MENU_NORMAL_ITEM,
   );
   $items['books/%user_uid_optional'] = array(
     'page callback' => 'docviewer_list',
     'page arguments' => array(1),
     'type' => MENU_CALLBACK,
-    'access arguments' => array('read books'),
+    'access arguments' => array('see list of books'),
   );
   $items['books/%user_uid_optional/%docviewer_document/%'] = array(
     'page callback' => 'docviewer_get_page',
     'page arguments' => array(1, 2, 3),
     'type' => MENU_CALLBACK,
-    'access arguments' => array('access docviewer content'),
+    'access arguments' => array('read books'),
   );
   $items['docviewer/%docviewer_document/delete'] = array(
     'title' => t('Delete document'),

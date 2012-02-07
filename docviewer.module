@@ -78,7 +78,7 @@ function docviewer_menu() {
     'page callback' => 'docviewer_get_page',
     'page arguments' => array(1, 2, 3),
     'type' => MENU_CALLBACK,
-    'access arguments' => array('access docviewer content'),
+    'access arguments' => array('read books'),
   );
   $items['docviewer/%docviewer_document/delete'] = array(
     'title' => t('Delete document'),
@@ -88,17 +88,6 @@ function docviewer_menu() {
     'type' => MENU_CALLBACK,
   );
   return $items;
-}
-
-//создание типа публикации
-function docviewer_node_info() {
-  return array(
-    'docviewer_page' => array(
-      'name' => t('page with document'),
-      'module' => 'docviewer',
-      'description' => "This is node with online viewer.",
-    )
-  );
 }
 
 //формы при создании новой публикации
@@ -146,7 +135,7 @@ function docviewer_upload_form() {
   );
   $form['submit'] = array(
     '#type' => 'submit',
-    '#value' => t('Save document'),
+    '#value' => t('Upload document'),
   );
   return $form;
 }
@@ -273,7 +262,7 @@ function _docviewer_caching_document($doc, $cache_folder) {
   exec("pdftoppm -png '". realpath($doc) ."' '". realpath($cache_folder) ."/page'");
   $file = file_scan_directory($cache_folder, "^page{1}-[0-9]+\.png$");
   foreach ($file as $value) {
-    if(_docviewer_resize($value->filename, 750, 0)) drupal_set_message("Resize file $value->basename failed.");
+    if (_docviewer_resize($value->filename, 750, 0)) drupal_set_message("Resize file $value->basename failed.");
   }
   return count($file);
 }
@@ -322,7 +311,7 @@ function docviewer_delete_confirm_submit($form, &$form_state) {
   global $_cache_dir;
   $id = $form_state['values']['docid'];
   if (!db_query("DELETE FROM {docviewer_documents} WHERE docid=%d", $id)) {
-    drupal_set_message(t("Delete document $id from database failed."), "error");
+    drupal_set_message(t("Delete document") . check_plain($id) . t("from database failed."), "error");
   }
   _rm(file_directory_path() ."/". $_source_dir ."/". $id); 
   _rm(file_directory_path() ."/". $_cache_dir ."/". $id); 
@@ -356,12 +345,12 @@ function docviewer_document_load($id) {
 function docviewer_get_page($uid, $doc, $page) {
   global $_cache_dir;
   $output = "";
-  if (preg_match("/^page-0*([0-9]+)$/i", $page, $matches) == 1){
+  if (preg_match("/^page-0*([0-9]+)$/i", $page, $matches) == 1) {
     $page = $matches[1];
     $zeros = "";
     for ($i = 0; $i<(strlen($doc->pages)-strlen($page)); $i++) $zeros .= "0";
       if (($page <= $doc->pages)&&($page > 0)) {
-        header ("Content-Type: image/png");
+        header("Content-Type: image/png");
         readfile(realpath(file_directory_path() ."/". $_cache_dir ."/". $doc->docid ."/page-". $zeros . $page .".png"));
       }
   }
@@ -424,4 +413,14 @@ function docviewer_list($uid = FALSE) {
 function docviewer_delete_document() {
   if (user_access('administer docviewer')||user_access('delete own books')) return TRUE;
   return FALSE;
+}
+
+function docviewer_node_info() {
+  return array(
+	'docviewer' => array(
+	  'name' => t('Document viewer'),
+	  'module' => 'docviewer',
+	  'description' =>t("Node with embeded viewer."),
+	)
+  );
 }
