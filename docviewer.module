@@ -9,7 +9,7 @@ function docviewer_perm() {
 //определение доступа к функциям
 function docviewer_access($op, $node, $account) {
   if ($op == 'create') {
-    return user_access('create docviewer nodes', $account);
+    return user_access('create nodes', $account);
   }
   if ($op == 'update' || $op == 'delete') {
     return user_access('edit docviewer nodes', $account);
@@ -100,13 +100,14 @@ function docviewer_form(&$node, $form_state) {
     '#default_value' => $node->title,
     '#weight' => -5,
   );
-  $form['body_filter']['body'] = array(
-    '#type' => 'textarea',
-    '#title' => t('Description of documents'),
-    '#default_value' => $node->body,
-    '#required' => FALSE,
+  $form['body_field'] = node_body_field($node, $type->body_label, $type->min_word_count);
+  $form['document'] = array(
+	'#type' => 'textfield',
+	'#title' => t('Enter document number'),
+	'#required' => TRUE,
+	'#weight' => 1,
   );
-  return $form;
+  return $form; 
 }
 
 //формы
@@ -325,7 +326,7 @@ function docviewer_delete_confirm(&$form_state, $doc) {
     '#type' => 'value',
     '#value' => $doc->docid,
   );
-  if (user_access('administer docviewer')||(user_access('delete_own_documents')&&($doc-uid == $user->uid))) {
+  if (user_access('administer docviewer')||(user_access('delete_own_documents')&&($doc->uid == $user->uid))) {
     return confirm_form($form, t("Are you sure you want to delete the revision <i>") . check_plain($doc->filename) . '</i>?', 'docviewer', t('This action cannot be undone.'), t('Delete'), t('Cancel') );
   }
   else {
