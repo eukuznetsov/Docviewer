@@ -389,7 +389,8 @@ function _docviewer_resize($path, $width) {
   //imagedestroy($src);
   return 0;
 }
-  
+ 
+ 
 function docviewer_list($uid = FALSE) {
   global $user;
   $output = "";
@@ -400,7 +401,7 @@ function docviewer_list($uid = FALSE) {
   }
   else {
     if (is_numeric($uid)) {
-      db_query();
+      $query = db_query("SELECT docid, filename, filesize, pages, uid FROM {docviewer_documents} WHERE uid=%d, active=1", $uid);
     }
   }
   $header = array('Id', t('Filename'), t('User'), t('Size'), t('Pages'), t('Actions')); 
