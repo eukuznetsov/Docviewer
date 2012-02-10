@@ -282,7 +282,7 @@ function docviewer_edit_list() {
   $header = array('Id', t('Filename'), t('Size'), t('Pages'), t('Actions')); 
   $data = array();
   while ($row = db_fetch_object($query)) {
-    $actions = l(t(delete), 'docviewer/'. $row->docid .'/delete', array('alias' => TRUE)); 
+    $actions = l(t(delete), 'docviewer/'. $row->docid .'/delete', array('alias' => TRUE));
     $data[] = array(
       $row->docid,
       $row->filename,
@@ -328,12 +328,19 @@ function docviewer_delete_confirm_submit($form, &$form_state) {
 
 //форма подтверждения удаления
 function docviewer_delete_confirm(&$form_state, $doc) {
+  global $user;
   $form['docid'] = array(
     '#type' => 'value',
     '#value' => $doc->docid,
   );
-  if (user_access('administer docviewer')||(user_access('delete_own_documents')&&($doc->uid == $user->uid))) {
-    return confirm_form($form, t("Are you sure you want to delete the revision <i>") . check_plain($doc->filename) . '</i>?', 'docviewer', t('This action cannot be undone.'), t('Delete'), t('Cancel') );
+  if(user_access('delete own books')&&($doc->uid == $user->uid)) {
+	  $own = true;
+  }
+  else {
+	  $own = false;
+  }
+  if (user_access('administer docviewer')||$own) {
+    return confirm_form($form, t("Are you sure you want to delete the document <i>") . check_plain($doc->filename) . '</i>?', 'docviewer', t('This action cannot be undone.'), t('Delete'), t('Cancel') );
   }
   else {
     drupal_set_message("You haven't permission to delete this document.", "error");
@@ -364,24 +371,22 @@ function docviewer_get_page($uid, $doc, $page) {
   drupal_goto();
 } 
 
-//resize image (create only smaller picture). if width or height is 0 then it set auto (by ratio)
+//resize image (create only smaller picture) by width.
 //0 - succesfull
 //1 - error
-function _docviewer_resize($path, $width, $height) {
-  if ((!width)&&(!height)) return 1;
-  if (!file_exists($path)) return 1;
-  $file = getimagesize($path);
-  if (($file === FALSE)||($file[0] < $width)||($file[1] < $height)) return 1;
-  $format = strtolower(substr($file['mime'], strpos($file['mime'], '/')+1)); 
-  if ($format != "png") return 1;
-  $src = imagecreatefrompng($path);
-  if ($height == 0) $height = floor($width*$file[1]/$file[0]);
-  if ($width == 0) $width = floor($height*$file[0]/$file[1]);
-  $dest = imagecreatetruecolor($width, $height);
-  imagecopyresampled($dest, $src, 0, 0, 0, 0, $width, $height, $file[0], $file[1]);
-  imagepng($dest, $path);
-  imagedestroy($dest);
-  imagedestroy($src);
+function _docviewer_resize($path, $width) {
+  //$test=new Imagick($path);
+  //$cur_size=$test->getImageGeometry();
+  //if($width < $cur_size['width']) {
+	//$test->thumbnailImage($width,0);
+  //}
+  //$test->setImageColorspace(imagick::COLORSPACE_SRGB);
+  //$test->writeImage($path);
+////Change quantity of colors
+  //$src = imagecreatefrompng($path);
+  //imagetruecolortopalette($src, false, 255);
+  //imagepng($src, $path);
+  //imagedestroy($src);
   return 0;
 }
   
@@ -401,8 +406,13 @@ function docviewer_list($uid = FALSE) {
   $header = array('Id', t('Filename'), t('User'), t('Size'), t('Pages'), t('Actions')); 
   $data = array();
   while ($row = db_fetch_object($query)) {
+	$actions = "";
     if ((($user->uid == $row->uid)&&user_access('delete own books'))||user_access('administer books'))
-      $actions = l(t(delete), 'docviewer/'. $row->docid .'/delete', array('alias' => TRUE)); 
+    {
+      $actions = l(t(delete), 'docviewer/'. $row->docid .'/delete', array('alias' => TRUE));
+      $actions .= '<br>';
+	}
+    $actions .= l(t(view), 'books/'. $row->uid .'/'. $row->docid);
     $data[] = array(
       $row->docid,
       $row->filename,
@@ -488,3 +498,5 @@ border-color: rgb(212, 212, 212); color: rgb(15, 15,
 class="active">&gt;&gt;</a>|</b> </div>  </div> </div>';
 	return $out;
 }
+
+
