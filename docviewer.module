@@ -65,14 +65,14 @@ function docviewer_menu() {
     'description' => t('Documents list'),
     'page callback' => 'docviewer_list',
     'page arguments' => array(), 
-    'access arguments' => array('see list of books'),
     'type' => MENU_NORMAL_ITEM,
+    'access callback' => '_docviewer_list_perm',
   );
   $items['books/%user_uid_optional'] = array(
     'page callback' => 'docviewer_list',
     'page arguments' => array(1),
     'type' => MENU_CALLBACK,
-    'access arguments' => array('see list of books'),
+    'access callback' => '_docviewer_list_perm',
   );
   $items['books/%user_uid_optional/%docviewer_document/%'] = array(
     'page callback' => 'docviewer_get_page',
@@ -396,22 +396,23 @@ function docviewer_list($uid = FALSE) {
   $output = "";
   if (user_access('add books')||user_access('administer docviewer')) $output .= drupal_get_form("docviewer_upload_form");
   if ($uid == FALSE) {
-    if (user_access('read books')||user_access('download books')||user_access('administer docviewer')) $query = db_query("SELECT docid, filename, filesize, pages, uid FROM {docviewer_documents} WHERE active=1");
-    if (!(user_access('read books')&&user_access('download books')&&user_access('administer docviewer'))&&(user_access('add books')||user_access('delete own books'))) $query = db_query("SELECT docid, filename, filesize, pages, uid FROM {docviewer_documents} WHERE active=1 AND uid=%d", $user->uid);
+	$query = db_query("SELECT docid, filename, filesize, pages, uid FROM {docviewer_documents} WHERE active=1");
   }
-  if (is_numeric($uid)) {
-	$query = db_query("SELECT docid, filename, filesize, pages, uid FROM {docviewer_documents} WHERE uid=%d AND active=1", $uid);
+  if (is_numeric($uid->uid)) {
+	$query = db_query("SELECT docid, filename, filesize, pages, uid FROM {docviewer_documents} WHERE uid=%d AND active=1", $uid->uid);
   }
   $header = array('Id', t('Filename'), t('User'), t('Size'), t('Pages'), t('Actions')); 
   $data = array();
   while ($row = db_fetch_object($query)) {
 	$actions = "";
-    if ((($user->uid == $row->uid)&&user_access('delete own books'))||user_access('administer books'))
+    if ((($user->uid == $row->uid)&&user_access('delete own books'))||user_access('administer docviewer'))
     {
       $actions = l(t(delete), 'docviewer/'. $row->docid .'/delete', array('alias' => TRUE));
       $actions .= '<br>';
 	}
-    $actions .= l(t(view), 'books/'. $row->uid .'/'. $row->docid);
+	if (user_access('read books')||user_access('administer docviewer')) {
+	  $actions .= l(t(view), 'books/'. $row->uid .'/'. $row->docid);
+    }
     $data[] = array(
       $row->docid,
       $row->filename,
@@ -498,4 +499,6 @@ class="active">&gt;&gt;</a>|</b> </div>  </div> </div>';
 	return $out;
 }
 
-
+function _docviewer_list_perm() {
+	return TRUE;
+}
