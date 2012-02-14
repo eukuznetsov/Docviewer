@@ -1,5 +1,7 @@
 <?php
 require_once('docviewer.cfg');
+//TODO: add in admin form documents that cached failed
+//TODO: add in admin-form checkboxes for select system-side or php caching
 
 //определяет список возможных прав
 function docviewer_perm() {
@@ -445,6 +447,7 @@ function docviewer_node_info() {
 function docviewer_read_book($uid, $document) {
 	global $user;
 	$out = "";
+	//$out .= theme('docviewer_viewer', 'TEMPLATED');
 	$out .= '<script type="text/javascript">';
 	$out .= 'var screen_height=screen.availHeight;
 	var screen_width=screen.availWidth';
@@ -501,4 +504,13 @@ class="active">&gt;&gt;</a>|</b> </div>  </div> </div>';
 
 function _docviewer_list_perm() {
 	return TRUE;
+}
+
+function docviewer_theme() {
+	return array(
+		'docviewer_viewer' => array(
+			'template' => 'viewer',
+			'arguments' => array('test' => NULL),
+		),
+	);
 }
