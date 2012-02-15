@@ -148,7 +148,7 @@ function docviewer_upload_form() {
   );
   $form['notify'] = array(
     '#type' => 'markup',
-    '#value' => '<br>'. t('If document name not write, document save with file name') .'<br>',
+    '#value' => '<br>'. t('If document name not write, document save with file name') .'<br><br>',
   );
   $form['submit'] = array(
     '#type' => 'submit',
@@ -163,7 +163,7 @@ function docviewer_upload_form() {
 //TODO:check mimetype
 //TODO:add checks
 function docviewer_upload_form_submit($form, &$form_state) {
-  $file = _docviewer_upload_doc($form, $form_state); 
+  $file = _docviewer_upload_doc($form, $form_state);
   switch ($file['error']) {
     case 0: 
       db_query("UPDATE {docviewer_documents} SET active=1 WHERE md5sum='%s'", $file['md5sum']); 
@@ -239,7 +239,7 @@ function _docviewer_upload_doc($form, &$form_state) {
     return $status;
   }
   //Не удалось добавить информацию о файле в базу
-  if (!db_query("INSERT INTO {docviewer_documents} (filename, pages, md5sum, uid, upload_date, filesize) VALUES('%s', '%d', '%s', '%d', '%d', '%d')", $file->filename, $pages, $md5sum, $user->uid, $file->timestamp, $file->filesize)) {
+  if (!db_query("INSERT INTO {docviewer_documents} (filename, pages, md5sum, uid, upload_date, filesize) VALUES('%s', '%d', '%s', '%d', '%d', '%d')", $form_state['values']['name'], $pages, $md5sum, $user->uid, $file->timestamp, $file->filesize)) {
     form_set_error('upload', t("Insert in database failed."));
     $status['error'] = 3; 
     return $status;
