@@ -2,6 +2,7 @@
 require_once('docviewer.cfg');
 //TODO: add in admin form documents that cached failed
 //TODO: add in admin-form checkboxes for select system-side or php caching
+//TODO: fix: redirect while press cancel in dialog for confirm file deleting
 
 //определяет список возможных прав
 function docviewer_perm() {
@@ -150,6 +151,10 @@ function docviewer_upload_form() {
     '#type' => 'markup',
     '#value' => '<br>'. t('If document name not write, document save with file name') .'<br><br>',
   );
+  $form['download'] = array(
+	'#type' => 'checkbox',
+	'#title' => t('Allow to download'),
+  );
   $form['submit'] = array(
     '#type' => 'submit',
     '#value' => t('Upload document'),
@@ -209,6 +214,7 @@ function _docviewer_upload_doc($form, &$form_state) {
     return $status;
   }
   $file = file_save_upload('upload', $validators, $dest);
+  if (empty($form_state['values']['name'])) $form_state['values']['name'] = $file->filename;
   //не удалось сохранить файл
   if ($file == 0) {
     form_set_error('upload', t("File saving fail."));
@@ -239,7 +245,7 @@ function _docviewer_upload_doc($form, &$form_state) {
     return $status;
   }
   //Не удалось добавить информацию о файле в базу
-  if (!db_query("INSERT INTO {docviewer_documents} (filename, pages, md5sum, uid, upload_date, filesize) VALUES('%s', '%d', '%s', '%d', '%d', '%d')", $form_state['values']['name'], $pages, $md5sum, $user->uid, $file->timestamp, $file->filesize)) {
+  if (!db_query("INSERT INTO {docviewer_documents} (filename, pages, md5sum, uid, upload_date, filesize, download) VALUES('%s', '%d', '%s', '%d', '%d', '%d', %d)", $form_state['values']['name'], $pages, $md5sum, $user->uid, $file->timestamp, $file->filesize, $file_state['values']['download'])) {
     form_set_error('upload', t("Insert in database failed."));
     $status['error'] = 3; 
     return $status;

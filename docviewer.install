@@ -6,35 +6,6 @@
 require_once('docviewer.cfg');
 
 function docviewer_schema() {
-$schema['docviewer_relations'] = array(
-  'description' => 'Node and documents relations',
-  'fields' => array(
-    'id' => array(
-      'description' => 'Primary key.',
-      'type' => 'serial',
-      'unsigned' => TRUE,
-      'not null' => TRUE),
-    'nid' => array(
-      'description' => 'Node identifier.',
-      'type' => 'int',
-      'unsigned' => TRUE,
-      'not null' => TRUE),
-    'num' => array(
-      'description' => 'Document number in node.',
-      'type' => 'int',
-      'unsigned' => TRUE,
-      'not null' => TRUE),
-    'docid' => array(
-      'description' => 'Document identifier.',
-      'type' => 'int',
-      'unsigned' => TRUE,
-      'not null' => TRUE),
-  ),
-  'unique keys' => array(
-    'id' => array('id'),
-  ),
-  'primary key' => array('id'),
-);
 $schema['docviewer_documents'] = array(
   'description' => 'Information about documents',
   'fields' => array(
@@ -59,7 +30,7 @@ $schema['docviewer_documents'] = array(
       'unsigned' => TRUE,
       'not null' => TRUE),
     'uid' => array(
-      'description' => 'User to upload the document.',
+      'description' => 'User upload the document.',
       'type' => 'int',
       'unsigned' => TRUE,
       'not null' => TRUE),
@@ -76,6 +47,12 @@ $schema['docviewer_documents'] = array(
     'active' => array(
       'type' => 'int',
       'description' => 'Processing status.',
+      'not null' => TRUE,
+      'unsigned' => TRUE,
+      'default' => 0),
+    'download' => array(
+      'type' => 'int',
+      'description' => 'It allowed to download.',
       'not null' => TRUE,
       'unsigned' => TRUE,
       'default' => 0),
