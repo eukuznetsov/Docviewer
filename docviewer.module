@@ -570,6 +570,7 @@ function docviewer_get_document($uid, $doc) {
 
 function docviewer_clear_form() {
 	global $_source_dir;
+	global $_cache_dir;
 	$form = array();
 	$form['header'] = array(
 		'#type' => 'value',
@@ -579,31 +580,58 @@ function docviewer_clear_form() {
 			t('Warning')
 		),
 	);
-	$sources = scandir(file_directory_path() ."/". $_source_dir);
-	$query = db_query("SELECT * FROM {docviewer_documents}");
+	$files = scandir(file_directory_path() ."/". $_source_dir);
+	$query = db_query("SELECT docid, pages FROM {docviewer_documents}");
 	$docs = array();
 	$options = array();
 	while ($row = db_fetch_object($query)) {
 		$docs[$row->docid] = array(
-			'md5sum' => $row->md5sum,
+			'pages' => $row->pages,
 		);
 	}
-	foreach($sources as $file) {
+	foreach($files as $file) {
 		if (($file == ".")||($file == "..")) {
 			continue;
 		}
-		if(!isset($docs[$file])) {
+		if (!isset($docs[$file])) {
 			$options[$file] = '';
 			$form['error'][$file] = array(
 				'#type' => 'value',
 				'#value' => 'File not in base',
 			);
-			$form[$file]= array(
+			$form[$file] = array(
 				'#type' => 'value',
 				'#value' => 'source',
 			);
+			continue;
 		}
 	}
+	$files = scandir(file_directory_path() ."/". $_cache_dir);
+	foreach($files as $file) {
+		if (($file == ".")||($file == "..")) {
+			continue;
+		}
+		if (!isset($docs[$file])) {
+			$options[$file] = '';
+			if (isset($form['error'][$file])) {
+				$where = "all";
+				$err = "Record in database not exists";
+			}
+			else {
+				$where = "source";
+				$err = "File not in base";
+			}
+			$form['error'][$file] = array(
+				'#type' => 'value',
+				'#value' => $err,
+			);
+			$form[$file] = array(
+				'#type' => 'value',
+				'#value' => $where,
+			);
+			continue;
+		}
+	}	
 	$form['chkbox'] = array(
 	    '#type' => 'checkboxes',
 		'#options' => $options,
@@ -632,16 +660,22 @@ function theme_docviewer_clear_form($form) {
 
 function docviewer_clear_form_submit(&$form, $form_state) {
 	global $_source_dir;
+	global $_cache_dir;
 	$path = "";
 	foreach(element_children($form_state['values']['chkbox']) as $key) {
-		drupal_set_message("State:". $form_state['values']['chkbox'][$key]);
 		if ($form_state['values']['chkbox'][$key] === $key) {
 			$path = file_directory_path();
 			if ($form_state['values'][$key] == "source") {
 				$path = realpath($path ."/". $_source_dir);
 			}
+			if ($form_state['values'][$key] == "cache") {
+				$path = realpath($path ."/". $_cache_dir);
+			}
+			if ($form_state['values'][$key] == "all") {
+				_rm($path ."/". $_cache_dir ."/". $key);
+				$path = realpath($path ."/". $_source_dir);
+			}
 			_rm($path ."/". $key);
 		}
-		drupal_set_message("D: ". $path);
 	}
 }
