@@ -3,6 +3,7 @@ require_once('docviewer.cfg');
 //TODO: add in admin form documents that cached failed
 //TODO: add in admin-form checkboxes for select system-side or php caching
 //TODO: fix: redirect while press cancel in dialog for confirm file deleting
+//TODO: add edit file infoemation
 
 //определяет список возможных прав
 function docviewer_perm() {
@@ -96,6 +97,12 @@ function docviewer_menu() {
     'access callback' => 'docviewer_delete_document',
     'type' => MENU_CALLBACK,
   );
+  $items['books/%user_uid_optional/%docviewer_document/get'] = array(
+    'page callback' => 'docviewer_get_document',
+    'page arguments' => array(1, 2),
+    'type' => MENU_CALLBACK,
+    'access arguments' => array('download books'),
+  );
   return $items;
 }
 
@@ -182,6 +189,7 @@ function docviewer_upload_form_submit($form, &$form_state) {
     case 2: 
       unlink($file['source_file']);
   }
+  drupal_set_message($form_state['values']['download']);
 }
 
 //TODO: move all variables in array 'status'
@@ -212,6 +220,12 @@ function _docviewer_upload_doc($form, &$form_state) {
     form_set_error('upload', t("Can't create directory for file"));
     $status['error'] = 1;
     return $status;
+  }
+  if ($form_state['values']['download'] == "1") {
+	  $is_download = 1;
+  }
+  else {
+	$is_download = 0;
   }
   $file = file_save_upload('upload', $validators, $dest);
   if (empty($form_state['values']['name'])) $form_state['values']['name'] = $file->filename;
@@ -245,7 +259,7 @@ function _docviewer_upload_doc($form, &$form_state) {
     return $status;
   }
   //Не удалось добавить информацию о файле в базу
-  if (!db_query("INSERT INTO {docviewer_documents} (filename, pages, md5sum, uid, upload_date, filesize, download) VALUES('%s', '%d', '%s', '%d', '%d', '%d', %d)", $form_state['values']['name'], $pages, $md5sum, $user->uid, $file->timestamp, $file->filesize, $file_state['values']['download'])) {
+  if (!db_query("INSERT INTO {docviewer_documents} (name, pages, md5sum, uid, upload_date, filesize, download, filename) VALUES('%s', '%d', '%s', '%d', '%d', '%d', '%d', '%s')", $form_state['values']['name'], $pages, $md5sum, $user->uid, $file->timestamp, $file->filesize, $is_download, $file->filename)) {
     form_set_error('upload', t("Insert in database failed."));
     $status['error'] = 3; 
     return $status;
@@ -294,14 +308,14 @@ function _docviewer_caching_document($doc, $cache_folder) {
 function docviewer_edit_list() {
   $output = "";
   $output .= drupal_get_form("docviewer_upload_form");
-  $query = db_query("SELECT docid, filename, filesize, pages FROM {docviewer_documents} WHERE active=1");
-  $header = array('Id', t('Filename'), t('Size'), t('Pages'), t('Actions')); 
+  $query = db_query("SELECT docid, name, filesize, pages FROM {docviewer_documents} WHERE active=1");
+  $header = array('Id', t('Title'), t('Size'), t('Pages'), t('Actions')); 
   $data = array();
   while ($row = db_fetch_object($query)) {
     $actions = l(t(delete), 'docviewer/'. $row->docid .'/delete', array('alias' => TRUE));
     $data[] = array(
       $row->docid,
-      $row->filename,
+      $row->name,
       $row->filesize,
       $row->pages,
       $actions,
@@ -356,7 +370,7 @@ function docviewer_delete_confirm(&$form_state, $doc) {
 	  $own = false;
   }
   if (user_access('administer docviewer')||$own) {
-    return confirm_form($form, t("Are you sure you want to delete the document <i>") . check_plain($doc->filename) . '</i>?', 'docviewer', t('This action cannot be undone.'), t('Delete'), t('Cancel') );
+    return confirm_form($form, t("Are you sure you want to delete the document <i>") . check_plain($doc->name) . '</i>?', 'docviewer', t('This action cannot be undone.'), t('Delete'), t('Cancel') );
   }
   else {
     drupal_set_message("You haven't permission to delete this document.", "error");
@@ -374,7 +388,6 @@ function docviewer_document_load($id) {
 //TODO:check host of the document
 function docviewer_get_page($uid, $doc, $page) {
   global $_cache_dir;
-  $output = "";
   if (preg_match("/^page-0*([0-9]+)$/i", $page, $matches) == 1) {
     $page = $matches[1];
     $zeros = "";
@@ -412,26 +425,30 @@ function docviewer_list($uid = FALSE) {
   $output = "";
   if (user_access('add books')||user_access('administer docviewer')) $output .= drupal_get_form("docviewer_upload_form");
   if ($uid == FALSE) {
-	$query = db_query("SELECT docid, filename, filesize, pages, uid FROM {docviewer_documents} WHERE active=1");
+	$query = db_query("SELECT docid, name, filesize, pages, download, uid FROM {docviewer_documents} WHERE active=1");
   }
   if (is_numeric($uid->uid)) {
-	$query = db_query("SELECT docid, filename, filesize, pages, uid FROM {docviewer_documents} WHERE uid=%d AND active=1", $uid->uid);
+	$query = db_query("SELECT docid, name, filesize, pages, uid, download FROM {docviewer_documents} WHERE uid=%d AND active=1", $uid->uid);
   }
-  $header = array('Id', t('Filename'), t('User'), t('Size'), t('Pages'), t('Actions')); 
+  $header = array('Id', t('Title'), t('User'), t('Size'), t('Pages'), t('Actions')); 
   $data = array();
   while ($row = db_fetch_object($query)) {
 	$actions = "";
     if ((($user->uid == $row->uid)&&user_access('delete own books'))||user_access('administer docviewer'))
     {
-      $actions = l(t(delete), 'docviewer/'. $row->docid .'/delete', array('alias' => TRUE));
-      $actions .= '<br>';
+      $actions = l(t('delete'), 'docviewer/'. $row->docid .'/delete', array('alias' => TRUE));
 	}
 	if (user_access('read books')||user_access('administer docviewer')) {
-	  $actions .= l(t(view), 'books/'. $row->uid .'/'. $row->docid);
+	  $actions .= '<br>';
+	  $actions .= l(t('view'), 'books/'. $row->uid .'/'. $row->docid);
     }
+    if (($row->download == 1)&&(user_access('download books'))) {
+	  $actions .= '<br>';
+	  $actions .= l(t('download'), 'books/'. $row->uid .'/'. $row->docid .'/get');	
+	}
     $data[] = array(
       $row->docid,
-      $row->filename,
+      $row->name,
       $row->uid,
       $row->filesize,
       $row->pages,
@@ -528,3 +545,11 @@ function docviewer_theme() {
 		),
 	);
 }
+
+function docviewer_get_document($uid, $doc) {
+  global $_source_dir;
+  header("Content-Type: application/octet-stream");
+  header("Content-Disposition: attachment; filename=\"". $doc->filename ."\";" );
+  readfile(realpath(file_directory_path() ."/". $_source_dir ."/". $doc->docid));
+  drupal_goto();
+} 
