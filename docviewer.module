@@ -103,6 +103,14 @@ function docviewer_menu() {
     'type' => MENU_CALLBACK,
     'access arguments' => array('download books'),
   );
+   $items['admin/content/docviewer/clear'] = array(
+    'title' => t('Delete failed documents.'),
+    'description' => t('Delete failed documents.'),
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('docviewer_clear_form'),
+    'access arguments' => array('administer docviewer'),
+    'type' => MENU_NORMAL_ITEM,
+  );
   return $items;
 }
 
@@ -221,12 +229,15 @@ function _docviewer_upload_doc($form, &$form_state) {
     $status['error'] = 1;
     return $status;
   }
+  
+  //костыль: не вставляется значение напрямую из формы
   if ($form_state['values']['download'] == "1") {
 	  $is_download = 1;
   }
   else {
 	$is_download = 0;
   }
+  
   $file = file_save_upload('upload', $validators, $dest);
   if (empty($form_state['values']['name'])) $form_state['values']['name'] = $file->filename;
   //не удалось сохранить файл
@@ -543,6 +554,9 @@ function docviewer_theme() {
 			'template' => 'viewer',
 			'arguments' => array('test' => NULL),
 		),
+		'docviewer_clear_form' => array(
+			'arguments' => array('form' => NULL),
+		),
 	);
 }
 
@@ -553,3 +567,81 @@ function docviewer_get_document($uid, $doc) {
   readfile(realpath(file_directory_path() ."/". $_source_dir ."/". $doc->docid));
   drupal_goto();
 } 
+
+function docviewer_clear_form() {
+	global $_source_dir;
+	$form = array();
+	$form['header'] = array(
+		'#type' => 'value',
+		'#value' => array(
+			theme('table_select_header_cell'),
+			t('File'),
+			t('Warning')
+		),
+	);
+	$sources = scandir(file_directory_path() ."/". $_source_dir);
+	$query = db_query("SELECT * FROM {docviewer_documents}");
+	$docs = array();
+	$options = array();
+	while ($row = db_fetch_object($query)) {
+		$docs[$row->docid] = array(
+			'md5sum' => $row->md5sum,
+		);
+	}
+	foreach($sources as $file) {
+		if (($file == ".")||($file == "..")) {
+			continue;
+		}
+		if(!isset($docs[$file])) {
+			$options[$file] = '';
+			$form['error'][$file] = array(
+				'#type' => 'value',
+				'#value' => 'File not in base',
+			);
+			$form[$file]= array(
+				'#type' => 'value',
+				'#value' => 'source',
+			);
+		}
+	}
+	$form['chkbox'] = array(
+	    '#type' => 'checkboxes',
+		'#options' => $options,
+    );
+    $form['submit'] = array(
+		'#type' => 'submit',
+		'#value' => t('Delete'),
+	);
+	return $form;
+}
+
+function theme_docviewer_clear_form($form) {
+	$output = "";
+	$rows = array();
+	foreach (element_children($form['error']) as $key) {
+		$rows[] = array(
+			drupal_render($form['chkbox'][$key]),
+			'filename' => $key,
+			'error' => $form['error'][$key]['#value'],
+		);
+	}
+	$output .= theme("table", $form['header']['#value'], $rows);
+	$output .= drupal_render($form);
+	return $output;
+}
+
+function docviewer_clear_form_submit(&$form, $form_state) {
+	global $_source_dir;
+	$path = "";
+	foreach(element_children($form_state['values']['chkbox']) as $key) {
+		drupal_set_message("State:". $form_state['values']['chkbox'][$key]);
+		if ($form_state['values']['chkbox'][$key] === $key) {
+			$path = file_directory_path();
+			if ($form_state['values'][$key] == "source") {
+				$path = realpath($path ."/". $_source_dir);
+			}
+			_rm($path ."/". $key);
+		}
+		drupal_set_message("D: ". $path);
+	}
+}
