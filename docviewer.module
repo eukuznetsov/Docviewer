@@ -1,6 +1,5 @@
 <?php
 require_once('docviewer.cfg');
-//TODO: add in admin form documents that cached failed
 //TODO: add in admin-form checkboxes for select system-side or php caching
 //TODO: fix: redirect while press cancel in dialog for confirm file deleting
 //TODO: add edit file infoemation
@@ -110,6 +109,12 @@ function docviewer_menu() {
     'page arguments' => array('docviewer_clear_form'),
     'access arguments' => array('administer docviewer'),
     'type' => MENU_NORMAL_ITEM,
+  );
+  $items['books/%user_uid_optional/%docviewer_document/edit'] = array(
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array(1, 2),
+    'type' => MENU_NORMAL_ITEM,
+    'access arguments' => array('read books'),
   );
   return $items;
 }
@@ -364,7 +369,7 @@ function docviewer_delete_confirm_submit($form, &$form_state) {
   _rm(file_directory_path() ."/". $_source_dir ."/". $id); 
   _rm(file_directory_path() ."/". $_cache_dir ."/". $id); 
   drupal_set_message(check_plain(t('Document succesfull delete')));
-  $form_state['redirect'] = "books/"; 
+  drupal_goto("books/");
 }
 
 //форма подтверждения удаления
