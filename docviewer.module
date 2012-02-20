@@ -2,7 +2,7 @@
 require_once('docviewer.cfg');
 //TODO: add in admin-form checkboxes for select system-side or php caching
 //TODO: fix: redirect while press cancel in dialog for confirm file deleting
-//TODO: add edit file infoemation
+//TODO: add edit file information
 
 //определяет список возможных прав
 function docviewer_perm() {
@@ -112,9 +112,9 @@ function docviewer_menu() {
   );
   $items['books/%user_uid_optional/%docviewer_document/edit'] = array(
     'page callback' => 'drupal_get_form',
-    'page arguments' => array(1, 2),
+    'page arguments' => array('docviewer_edit_form', 1, 2),
     'type' => MENU_NORMAL_ITEM,
-    'access arguments' => array('read books'),
+    'access callback' => 'docviewer_edit_access',
   );
   return $items;
 }
@@ -153,31 +153,36 @@ function docviewer_upload_form() {
     drupal_set_message(t("File size is larger than allowed."), 'error');
   }
   $form['#attributes'] = array('enctype' => "multipart/form-data");
-  $form['upload'] = array(
-    '#type' => 'file',
-    '#title' => t('Upload document'),
-    '#size' => 22,
-    '#weight' => 0,
-  );
-  $form['max_filesize'] = array(
-    '#type' => 'markup',
-    '#value' => "<b>Max file size:</b> ". (file_upload_max_size()/1024/1024) .'MB<br>',
-  );
   $form['name'] = array(
 	'#type' => 'textfield',
 	'#title' => t('Document name'),
+	'#weight' => 0,
   );
   $form['notify'] = array(
     '#type' => 'markup',
     '#value' => '<br>'. t('If document name not write, document save with file name') .'<br><br>',
+	'#weight' => $form['name']['#weight'] +1,
+  );
+  $form['upload'] = array(
+    '#type' => 'file',
+    '#title' => t('Upload file'),
+    '#size' => 22,
+    '#weight' => 2,
+  );
+  $form['max_filesize'] = array(
+    '#type' => 'markup',
+    '#value' => "<b>Max file size:</b> ". (file_upload_max_size()/1024/1024) .'MB<br>',
+	'#weight' => $form['upload']['#weight'] +1,
   );
   $form['download'] = array(
 	'#type' => 'checkbox',
 	'#title' => t('Allow to download'),
+	'#weight' => 5,
   );
   $form['submit'] = array(
     '#type' => 'submit',
     '#value' => t('Upload document'),
+    '#weight' => 6,
   );
   return $form;
 }
@@ -683,4 +688,12 @@ function docviewer_clear_form_submit(&$form, $form_state) {
 			_rm($path ."/". $key);
 		}
 	}
+}
+
+function docviewer_edit_form() {
+	
+}
+
+function docviewer_edit_form_submit() {
+	
 }
