@@ -504,58 +504,7 @@ function docviewer_node_info() {
 function docviewer_read_book($uid, $document) {
 	global $user;
 	$out = "";
-	//$out .= theme('docviewer_viewer', 'TEMPLATED');
-	$out .= '<script type="text/javascript">';
-	$out .= 'var screen_height=screen.availHeight;
-	var screen_width=screen.availWidth';
-	$out .= '
-	function load_img(book_img, $url_img, $p_num){
-var c_id = document.getElementById( "page_counter" );
-  book_img.width = 300;
-  book_img.src = $url_img;
-  c_id.value = $p_num;
-  book_img.width = 720;
-}
-</script>';
-	$out .= "<div class=\"resizable-textarea\"> <div 
-	class=\"resizable-area\" style=\"border-bottom-style:none; 
-	border-width:1px; border-color: rgb(212, 212, 212);\">";
-	$page_count = $document->pages; // Количество страниц в книге //
-	$out .= '
-	<div class="scrolling-area" style="overflow:auto; 
-	width:754px; height:500px; border-style: solid;  border-width: 1px; 
-	border-color: rgb(212, 212, 212); color: rgb(15, 15, 15);"> <span> <table border="1" bgcolor="silver">';
-	for ($page_no=1; $page_no<=$page_count; $page_no++) {
-		$out .= '<tr><td>';
-		$out .= '  <p><img src="'. base_path() . drupal_get_path('module', 'docviewer') .'/list-page.png' .'"width="150px" id="page_';
-		$out .= $page_no;
-		$out .= '"';
-		$out .= "  onClick=\"load_img(this,'";
-		$out .= url("books/". $uid->uid ."/". $document->docid ."/page-". $page_no);
-		$out .= "', ";
-		$out .= $page_no;
-		$out .= ")\" onMouseOver=\"load_img(this,'";
-		$out .= url("books/". $uid->uid ."/". $document->docid."/page-". $page_no);
-		$out .= "', ";
-		$out .= $page_no;
-		$out .= ')">';
-		$out .= '</td></tr>';
-	}
-	$out .= '
-</table> <p id="page_last"> </span> </div> </div>  <div 
-class="grippie" style="margin-right: 6px; width: 754px;" 
-onMouseOver=";">&nbsp;</div>  <div class="bottom-area" 
-style="overflow:auto; width:754px; height:50px; padding: 4px; 
-border-top-style:none; border-width:1px; border-color: rgb(212, 212, 
-212);">  <div style="width: 752px; height: 20px;"> 
-Страница:&nbsp;<b>|<a href="#page_first" title="Начало" 
-class="active">&lt;&lt;</a>&nbsp;&nbsp;&lt;&nbsp;<input 
-class="page_counter" value="1" type="text" style="width: 40px; 
-height: 14px; margin-left: 3px; text-align: center;" 
-id="page_counter"; border-style: solid;  border-width: 1px; 
-border-color: rgb(212, 212, 212); color: rgb(15, 15, 
-15)>&nbsp;&gt;&nbsp;&nbsp;<a href="#page_last" title="Конец" 
-class="active">&gt;&gt;</a>|</b> </div>  </div> </div>';
+	$out .= theme('docviewer_viewer', $document, $uid);
 	return $out;
 }
 
@@ -567,9 +516,10 @@ function docviewer_theme() {
 	return array(
 		'docviewer_viewer' => array(
 			'template' => 'viewer',
-			'arguments' => array('test' => NULL),
+			'arguments' => array('document' => NULL, 'uid' => NULL),
 		),
 		'docviewer_clear_form' => array(
+			'file' => 'viewer',
 			'arguments' => array('form' => NULL),
 		),
 	);
@@ -731,4 +681,8 @@ function docviewer_edit_form_submit($form, &$form_state) {
 function docviewer_edit_access($doc) {
 	global $user;
 	if (($user->uid == $doc->uid)||(user_access('administer docviewer'))) return TRUE;
+}
+
+function docviewer_viewer_preprocess(&$variables, $hook) {
+	print_r($hook);
 }
