@@ -61,6 +61,11 @@ $schema['docviewer_documents'] = array(
       'not null' => TRUE,
       'unsigned' => TRUE,
       'default' => 0),
+    'subject' => array(
+	  'description' => 'Subject og the document.',
+      'type' => 'varchar',
+      'length' => 256,
+      'not null' => TRUE),
   ),
   'unique keys' => array(
     'docid' => array('docid'),
