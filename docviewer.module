@@ -440,23 +440,31 @@ function _docviewer_resize($path, $width) {
 function docviewer_list($uid = FALSE) {
   global $user;
   $output = "";
+  
+  $perpage = 20;
+  
+  $header = array(
+  array('data' => 'Id', 'field' => 'docid'),
+  array('data' => t('Title'), 'field' => 'name'),
+  array('data' => t('Section'), 'field' => 'subject'),
+  array('data' =>  t('User'), 'field' => 'uid'),
+  array('data' => t('Size'), 'field' => 'filesize'),
+  array('data' => t('Pages'), 'field' => 'pages'), 
+  t('Actions')	
+  );
+  
   if (user_access('add books')||user_access('administer docviewer')) $output .= drupal_get_form("docviewer_upload_form");
-  if ($uid == FALSE) {
-	$query = db_query("SELECT docid, name, filesize, pages, download, uid, subject FROM {docviewer_documents} WHERE active=1");
+  if ($uid === FALSE) {
+	$query = db_query("SELECT * FROM {docviewer_documents} WHERE active=1 ". tablesort_sql($header));
   }
   if (is_numeric($uid->uid)) {
-	$query = db_query("SELECT docid, name, filesize, pages, uid, download, subject FROM {docviewer_documents} WHERE uid=%d AND active=1", $uid->uid);
+	$query = db_query("SELECT * FROM {docviewer_documents} WHERE uid=%d AND active=1". tablesort_sql($header), $uid->uid);
   }
-  $header = array('Id', t('Title'), t('Section'), t('User'), t('Size'), t('Pages'), t('Actions')); 
+
   $data = array();
   while ($row = db_fetch_object($query)) {
 	$actions = "";
-    if ((($user->uid == $row->uid)&&user_access('delete own books'))||user_access('administer docviewer'))
-    {
-      $actions = l(t('delete'), 'docviewer/'. $row->docid .'/delete', array('alias' => TRUE));
-	}
 	if (user_access('read books')||user_access('administer docviewer')) {
-	  $actions .= '<br>';
 	  $actions .= l(t('view'), 'books/'. $row->uid .'/'. $row->docid);
     }
     if (($row->download == 1)&&(user_access('download books'))) {
@@ -466,6 +474,10 @@ function docviewer_list($uid = FALSE) {
 	if (docviewer_edit_access($row)) {
 	  $actions .= '<br>';
 	  $actions .= l(t('edit'), 'books/'. $row->uid .'/'. $row->docid .'/edit');
+	}
+	if ((($user->uid == $row->uid)&&user_access('delete own books'))||user_access('administer docviewer')) {
+	  $actions .= '<br>'; 
+      $actions .= l(t('delete'), 'docviewer/'. $row->docid .'/delete', array('alias' => TRUE));
 	}
     $data[] = array(
       $row->docid,
@@ -478,6 +490,7 @@ function docviewer_list($uid = FALSE) {
     );
   }
   $output .= theme_table($header, $data);
+  //$output .= theme('pager');
   return $output; 
 } 
 
