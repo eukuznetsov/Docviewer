@@ -1,6 +1,5 @@
 <?php
 require_once('docviewer.cfg');
-//TODO: add in admin-form checkboxes for select system-side or php caching
 
 //определяет список возможных прав
 function docviewer_perm() {
@@ -94,7 +93,7 @@ function docviewer_menu() {
     'access arguments' => array('download books'),
   );
    $items['admin/content/docviewer_clear'] = array(
-    'title' => t('Delete failed documents.'),
+    'title' => t('Delete failed documents'),
     'description' => t('Delete failed documents.'),
     'page callback' => 'drupal_get_form',
     'page arguments' => array('docviewer_clear_form'),
@@ -135,51 +134,71 @@ function docviewer_form(&$node, $form_state) {
 //загрузка файла на сервер
 function docviewer_upload_form() {
   global $user;
+  
   //Администратор может загружать любые файлы. Проверки отключаются
-  if ($user->uid == 1) {
+  if ($user->uid === 1) {
     drupal_set_message("You are login as admin. File validation off.", "warning");
   }
+  
+  $objects = array();
+  $objects = docviewer_get_objects_select();
+  $objects[t('Add own section...')] = t('Add own section...');
+  
   $form = array();
   //если условие выполняется значит была попытка загрузить файл больше разрешенного размера
   if (($_SERVER['CONTENT_LENGTH'])&&(parse_size(ini_get("post_max_size")) < $_SERVER['CONTENT_LENGTH'])) {
     drupal_set_message(t("File size is larger than allowed."), 'error');
   }
+   $form['subj'] = array(
+	'#type' => 'fieldset',
+	'#title' => t('Upload file'),
+	'#collapsible' => TRUE,
+	'#collapsed' => FALSE,
+  );
   $form['#attributes'] = array('enctype' => "multipart/form-data");
-  $form['name'] = array(
+  $form['subj']['name'] = array(
 	'#type' => 'textfield',
 	'#title' => t('Document name'),
-	'#weight' => 0,
   );
-  $form['notify'] = array(
+  $form['subj']['notify'] = array(
     '#type' => 'markup',
-    '#value' => '<br>'. t('If document name not write, document save with file name') .'<br><br>',
-	'#weight' => $form['name']['#weight'] +1,
+    '#value' => '<div>'. t('If document name not write, document save with file name') .'</div>',
   );
-  $form['upload'] = array(
+  
+  $form['subj']['section'] = array(
+  '#type' => 'fieldset',
+  '#collapsible' => FALSE,
+  '#collapsed' => FALSE,
+  '#prefix' => "<div class='container-inline'>",
+  '#suffix' => '</div>',
+	'#element_validate' => array('_subject_validate'),
+  );
+  $form['subj']['section']['subject'] = array(
+	'#type' => 'select',
+	'#title' => t('Section'),
+	'#required' => TRUE,
+	'#options' => $objects,
+  );
+  $form['subj']['section']['own_subject'] = array(
+	'#type' => 'textfield',
+	'#title' => t(''),
+  );
+  $form['subj']['upload'] = array(
     '#type' => 'file',
     '#title' => t('Upload file'),
     '#size' => 22,
-    '#weight' => 3,
   );
-  $form['max_filesize'] = array(
+  $form['subj']['max_filesize'] = array(
     '#type' => 'markup',
-    '#value' => "<b>Max file size:</b> ". (file_upload_max_size()/1024/1024) .'MB<br>',
-	'#weight' => $form['upload']['#weight'] +1,
+    '#value' => "<div><b>Max file size:</b> ". (file_upload_max_size()/1024/1024) .'MB</div>',
   );
-  $form['download'] = array(
+  $form['subj']['download'] = array(
 	'#type' => 'checkbox',
 	'#title' => t('Allow to download'),
-	'#weight' => 6,
   );
-  $form['submit'] = array(
+  $form['subj']['submit'] = array(
     '#type' => 'submit',
     '#value' => t('Upload document'),
-    '#weight' => 7,
-  );
-  $form['subject'] = array(
-	'#type' => 'textfield',
-	'#title' => t('Section'),
-	'#weight' => 2,
   );
   return $form;
 }
@@ -188,7 +207,6 @@ function docviewer_upload_form() {
 //TODO:AJAX, перенаправление на страницу с прогрессбаром
 //TODO:learn drupal path build function, and rewrite function
 //TODO:check mimetype
-//TODO:add checks
 function docviewer_upload_form_submit($form, &$form_state) {
   $file = _docviewer_upload_doc($form, $form_state);
   switch ($file['error']) {
@@ -204,7 +222,6 @@ function docviewer_upload_form_submit($form, &$form_state) {
     case 2: 
       unlink($file['source_file']);
   }
-  drupal_set_message($form_state['values']['download']);
 }
 
 //TODO: move all variables in array 'status'
@@ -276,8 +293,11 @@ function _docviewer_upload_doc($form, &$form_state) {
     $status['error'] = 3; 
     return $status;
   }
+  
+  $subject = ($form_state['values']['subject'] === t('Add own section...')) ? $form_state['values']['own_subject'] : $form_state['values']['subject'];
+  
   //Не удалось добавить информацию о файле в базу
-  if (!db_query("INSERT INTO {docviewer_documents} (name, pages, md5sum, uid, upload_date, filesize, download, filename, subject) VALUES('%s', '%d', '%s', '%d', '%d', '%d', '%d', '%s', '%s')", $form_state['values']['name'], $pages, $md5sum, $user->uid, $file->timestamp, $file->filesize, $is_download, $file->filename, $form_state['values']['section'])) {
+  if (!db_query("INSERT INTO {docviewer_documents} (name, pages, md5sum, uid, upload_date, filesize, download, filename, subject) VALUES('%s', '%d', '%s', '%d', '%d', '%d', '%d', '%s', '%s')", $form_state['values']['name'], $pages, $md5sum, $user->uid, $file->timestamp, $file->filesize, $is_download, $file->filename, check_plain($subject))) {
     form_set_error('upload', t("Insert in database failed."));
     $status['error'] = 3; 
     return $status;
@@ -422,12 +442,12 @@ function docviewer_list($uid = FALSE) {
   $output = "";
   if (user_access('add books')||user_access('administer docviewer')) $output .= drupal_get_form("docviewer_upload_form");
   if ($uid == FALSE) {
-	$query = db_query("SELECT docid, name, filesize, pages, download, uid FROM {docviewer_documents} WHERE active=1");
+	$query = db_query("SELECT docid, name, filesize, pages, download, uid, subject FROM {docviewer_documents} WHERE active=1");
   }
   if (is_numeric($uid->uid)) {
-	$query = db_query("SELECT docid, name, filesize, pages, uid, download FROM {docviewer_documents} WHERE uid=%d AND active=1", $uid->uid);
+	$query = db_query("SELECT docid, name, filesize, pages, uid, download, subject FROM {docviewer_documents} WHERE uid=%d AND active=1", $uid->uid);
   }
-  $header = array('Id', t('Title'), t('User'), t('Size'), t('Pages'), t('Actions')); 
+  $header = array('Id', t('Title'), t('Section'), t('User'), t('Size'), t('Pages'), t('Actions')); 
   $data = array();
   while ($row = db_fetch_object($query)) {
 	$actions = "";
@@ -450,6 +470,7 @@ function docviewer_list($uid = FALSE) {
     $data[] = array(
       $row->docid,
       $row->name,
+      $row->subject,
       $row->uid,
       $row->filesize,
       $row->pages,
@@ -621,6 +642,11 @@ function docviewer_clear_form_submit(&$form, $form_state) {
 }
 
 function docviewer_edit_form($form, $doc) {
+	
+	$objects = array();
+	$objects = docviewer_get_objects_select();
+	$objects[t('Add own section...')] = t('Add own section...');
+	
 	$form = array();
 	$form['id'] = array(
 		'#type' => 'hidden',
@@ -632,6 +658,24 @@ function docviewer_edit_form($form, $doc) {
 	'#weight' => 0,
 	'#required' => TRUE,
 	'#default_value' => $doc->name,
+	);
+	$form['section'] = array(
+	'#type' => 'fieldset',
+	'#collapsible' => FALSE,
+	'#collapsed' => FALSE,
+	'#prefix' => "<div class='container-inline'>",
+	'#suffix' => '</div>',
+	'#element_validate' => array('_subject_validate'),
+	);
+	$form['section']['subject'] = array(
+	'#type' => 'select',
+	'#title' => t('Section'),
+	'#required' => TRUE,
+	'#options' => $objects,
+	);
+	$form['section']['own_subject'] = array(
+	'#type' => 'textfield',
+	'#title' => t(''),
 	);
 	$form['download'] = array(
 	'#type' => 'checkbox',
@@ -649,7 +693,8 @@ function docviewer_edit_form($form, $doc) {
 
 function docviewer_edit_form_submit($form, &$form_state) {
 	$form_state['values']['name'] = check_plain($form_state['values']['name']);
-	db_query("UPDATE {docviewer_documents} SET name='%s', download='%d' WHERE docid='%d'", $form_state['values']['name'], $form_state['values']['download'], $form_state['values']['id']);
+	$subject = ($form_state['values']['subject'] === t('Add own section...')) ? $form_state['values']['own_subject'] : $form_state['values']['subject'];
+	db_query("UPDATE {docviewer_documents} SET name='%s', download='%d', subject='%s' WHERE docid='%d'", $form_state['values']['name'], $form_state['values']['download'],  check_plain($subject), $form_state['values']['id']);
 	drupal_goto("/books");
 }
 
@@ -659,5 +704,19 @@ function docviewer_edit_access($doc) {
 }
 
 function docviewer_viewer_preprocess(&$variables, $hook) {
-	print_r($hook);
+}
+
+function docviewer_get_objects_select() {
+  $query = db_query("SELECT subject FROM {docviewer_documents}");
+  $objects = array();
+  while ($row = db_fetch_object($query)) {
+		if (!isset($objects[$row->subject])) $objects[$row->subject] = $row->subject;
+  }
+  return $objects;
+}
+
+function _subject_validate($element, $form_state) {
+	if (($element['#post']['subject'] === t('Add own section...'))&&(empty($element['#post']['own_subject']))) {
+		form_error($element, t('Enter section name'));
+	}
 }
