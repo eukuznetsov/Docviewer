@@ -455,10 +455,12 @@ function docviewer_list($uid = FALSE) {
   
   if (user_access('add books')||user_access('administer docviewer')) $output .= drupal_get_form("docviewer_upload_form");
   if ($uid === FALSE) {
-	$query = db_query("SELECT * FROM {docviewer_documents} WHERE active=1 ". tablesort_sql($header));
+	$query = pager_query("SELECT * FROM {docviewer_documents} WHERE active=1 ". tablesort_sql($header), $perpage, 0, "SELECT COUNT(*) FROM {docviewer_documents} WHERE active=1");
   }
   if (is_numeric($uid->uid)) {
-	$query = db_query("SELECT * FROM {docviewer_documents} WHERE uid=%d AND active=1". tablesort_sql($header), $uid->uid);
+	$sql = "SELECT * FROM {docviewer_documents} WHERE uid=%d AND active=1". tablesort_sql($header);
+	$sql_count = "SELECT COUNT(*) FROM {docviewer_documents} WHERE active=1";
+	$query = pager_query($sql, $perpage, 0, $sql_count, $uid->uid);
   }
 
   $data = array();
@@ -490,7 +492,7 @@ function docviewer_list($uid = FALSE) {
     );
   }
   $output .= theme_table($header, $data);
-  //$output .= theme('pager');
+  $output .= theme('pager');
   return $output; 
 } 
 
