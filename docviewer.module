@@ -454,6 +454,7 @@ function docviewer_list($uid = FALSE) {
   );
   
   if (user_access('add books')||user_access('administer docviewer')) $output .= drupal_get_form("docviewer_upload_form");
+  $output .= drupal_get_form('docviewer_list_filter');
   if ($uid === FALSE) {
 	$query = pager_query("SELECT * FROM {docviewer_documents} WHERE active=1 ". tablesort_sql($header), $perpage, 0, "SELECT COUNT(*) FROM {docviewer_documents} WHERE active=1");
   }
@@ -734,4 +735,75 @@ function _subject_validate($element, $form_state) {
 	if (($element['#post']['subject'] === t('Add own section...'))&&(empty($element['#post']['own_subject']))) {
 		form_error($element, t('Enter section name'));
 	}
+}
+
+function docviewer_list_filter(&$form_state) {
+	$form = array();
+	
+	$users = docviewer_get_users_select();
+	$sections = docviewer_get_objects_select();
+	$sections['all'] = t('All');
+	$users['all'] = t('All');
+	
+	$form['filter'] = array(
+	'#type' => 'fieldset',
+	'#collapsible' => TRUE,
+	'#collapsed' => FALSE,
+	'#title' => t('Filter'),
+	);
+	$form['filter']['fields'] = array(
+		'#prefix' => '<div class="container-inline">',
+		'#suffix' => '</div>',
+	);
+	$form['filter']['fields']['section'] = array(
+	'#type' => 'select',
+	'#title' => t('Section'),
+	'#required' => FALSE,
+	'#options' => $sections,
+	'#default_value' => t('All'),
+	);
+	$form['filter']['fields']['user'] = array(
+	'#type' => 'select',
+	'#title' => t('User'),
+	'#required' => FALSE,
+	'#options' => $users,
+	'#default_value' => t('All'),
+	);
+	$form['filter']['submit'] = array(
+    '#type' => 'submit',
+    '#value' => t('Apply'),
+    '#validate' => array('docviewer_filter_validate'),
+	);
+	return $form;
+}
+
+function docviewer_filter_validate($form, &$form_state) {
+	$form_state['storage'] = $form_state['values'];
+	$form_state['rebuild'] = TRUE;
+}
+
+//hard linked to table profile_values
+function docviewer_get_users_select() {
+  //get surname
+  $query = db_query("SELECT users.uid, users.name, val.value FROM {users} AS users JOIN {docviewer_documents} AS docs ON users.uid=docs.uid LEFT JOIN {profile_values} AS val ON docs.uid=val.uid LEFT JOIN {profile_fields} AS profile ON val.fid=profile.fid WHERE profile.name='profile_surname' OR profile.name IS NULL AND docs.active=1");
+  $objects = array();
+  while ($row = db_fetch_object($query)) {
+		if (!isset($objects[$row->uid])) {
+			$objects[$row->uid] = $row->name;
+			if (!empty($row->value)) $objects[$row->uid] .= " - ". $row->value;
+		}
+  }
+  ////get name
+  $query = db_query("SELECT docs.uid, val.value FROM {docviewer_documents} AS docs LEFT JOIN {profile_values} AS val ON docs.uid=val.uid LEFT JOIN {profile_fields} AS profile ON val.fid=profile.fid WHERE profile.name='profile_name' AND docs.active=1");
+  while ($row = db_fetch_object($query)) {
+	if (!empty($row->value))
+		$objects[$row->uid] .= " ". mb_substr($row->value, 0, 1) .". ";
+  }
+  ////get secondname
+  $query = db_query("SELECT docs.uid,  val.value FROM {docviewer_documents} AS docs LEFT JOIN {profile_values} AS val ON docs.uid=val.uid LEFT JOIN {profile_fields} AS profile ON val.fid=profile.fid WHERE profile.name='profile_pname' AND docs.active=1");
+  while ($row = db_fetch_object($query)) {
+	if (!empty($row->value))
+		$objects[$row->uid] .= " ". mb_substr($row->value, 0, 1) .".";
+  }
+  return $objects;
 }
