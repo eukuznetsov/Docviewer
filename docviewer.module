@@ -442,6 +442,7 @@ function docviewer_list($uid = FALSE) {
   
   if (user_access('add books')||user_access('administer docviewer')) $output .= drupal_get_form("docviewer_upload_form");
   $output .= drupal_get_form('docviewer_list_filter', $uid);
+  
   return $output; 
 } 
 
@@ -782,11 +783,14 @@ function docviewer_list_filter(&$form_state, $uid) {
 			$actions .= '<br>'; 
 			$actions .= l(t('delete'), 'docviewer/'. $row->docid .'/delete', array('alias' => TRUE));
 		}
+		
+		$doc_user = user_load($row->uid);
+		
 		$data[] = array(
 			$row->docid,
 			check_plain($row->name),
 			check_plain($row->subject),
-			check_plain($row->uid),
+			check_plain($doc_user->name),
 			$row->filesize,
 			$row->pages,
 			$actions,
