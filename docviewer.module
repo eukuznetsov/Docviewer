@@ -488,10 +488,19 @@ function docviewer_theme() {
 
 function docviewer_get_document($uid, $doc) {
   global $_source_dir;
-  header("Content-Type: application/octet-stream");
-  header("Content-Disposition: attachment; filename=\"". $doc->filename ."\";" );
-  readfile(realpath(file_directory_path() ."/". $_source_dir ."/". $doc->docid));
-  drupal_goto();
+  
+  if (user_access("download books", $uid) && ($doc->download == 1)) {
+	header("Content-Type: application/octet-stream");
+	header("Content-Disposition: attachment; filename=\"". $doc->filename ."\";" );
+	readfile(realpath(file_directory_path() ."/". $_source_dir ."/". $doc->docid));
+  
+  }
+  else{
+	
+  }
+  
+  $out = t("You haven't permisson.");
+  return $out;
 } 
 
 function docviewer_clear_form() {
@@ -791,7 +800,7 @@ function docviewer_list_filter(&$form_state, $uid) {
 			check_plain($row->name),
 			check_plain($row->subject),
 			check_plain($doc_user->name),
-			$row->filesize,
+			round($row->filesize/1024, 2) . t(" kB"),
 			$row->pages,
 			$actions,
 		);
