@@ -3,17 +3,7 @@ require_once('docviewer.cfg');
 
 //определяет список возможных прав
 function docviewer_perm() {
-  return array("read books", "download books", "add books", "delete own books",  "administer docviewer");
-}
-
-//определение доступа к функциям
-function docviewer_access($op, $node, $account) {
-  if ($op == 'create') {
-    return user_access('create nodes', $account);
-  }
-  if ($op == 'update' || $op == 'delete') {
-    return user_access('edit docviewer nodes', $account);
-  }
+  return array(t("read books"), t("download books"), t("add books"), t("delete own books"),  t("administer docviewer"));
 }
 
 //вывод справки
@@ -27,32 +17,9 @@ function docviewer_help($path, $arg) {
   return $output;
 }
 
-//страница администрирования
-function docviewer_admin() {
-  $form = array();
-  $form['docviewer_header'] = array(
-    '#type' => 'textfield',
-    '#title' => t('Default header'),
-    '#default_value' => variable_get('docviewer_header', 'DocViewer'),
-    '#size' => 20,
-    '#maxlength' => 30,
-    '#description' => t("Default header of document navigator"),
-    '#required' => TRUE,
-  );
-  return system_settings_form($form);
-}
-
 //ссылка в меню
 function docviewer_menu() {
   $items = array();
-  $items['admin/settings/docviewer'] = array(
-    'title' => t('DocViewer settings'),
-    'description' => t('Settings for DocViewer'),
-    'page callback' => 'drupal_get_form',
-    'page arguments' => array('docviewer_admin'),
-    'access arguments' => array('administer docviewer'),
-    'type' => MENU_NORMAL_ITEM,
-  );
   $items['books'] = array(
     'title' => t('Documents'),
     'description' => t('Documents list'),
@@ -71,13 +38,13 @@ function docviewer_menu() {
     'page callback' => 'docviewer_get_page',
     'page arguments' => array(1, 2, 3),
     'type' => MENU_CALLBACK,
-    'access arguments' => array('read books'),
+    'access arguments' => array(t('read books')),
   );
   $items['books/%user_uid_optional/%docviewer_document'] = array(
     'page callback' => 'docviewer_read_book',
     'page arguments' => array(1, 2),
     'type' => MENU_CALLBACK,
-    'access arguments' => array('read books'),
+    'access arguments' => array(t('read books')),
   );
   $items['docviewer/%docviewer_document/delete'] = array(
     'title' => t('Delete document'),
@@ -90,14 +57,15 @@ function docviewer_menu() {
     'page callback' => 'docviewer_get_document',
     'page arguments' => array(1, 2),
     'type' => MENU_CALLBACK,
-    'access arguments' => array('download books'),
+    'access callback' => '_perm_get_book',
+    'access arguments' => array(1, 2),
   );
    $items['admin/content/docviewer_clear'] = array(
     'title' => t('Delete failed documents'),
     'description' => t('Delete failed documents.'),
     'page callback' => 'drupal_get_form',
     'page arguments' => array('docviewer_clear_form'),
-    'access arguments' => array('administer docviewer'),
+    'access arguments' => array(t('administer docviewer')),
     'type' => MENU_NORMAL_ITEM,
   );
   $items['books/%user_uid_optional/%docviewer_document/edit'] = array(
@@ -108,26 +76,6 @@ function docviewer_menu() {
     'access arguments' => array(2),
   );
   return $items;
-}
-
-//формы при создании новой публикации
-function docviewer_form(&$node, $form_state) {
-  $type = node_get_types('type', $node);
-  $form['title'] = array(
-    '#type' => 'textfield',
-    '#title' => check_plain($type->title_label),
-    '#required' => TRUE,
-    '#default_value' => $node->title,
-    '#weight' => -5,
-  );
-  $form['body_field'] = node_body_field($node, $type->body_label, $type->min_word_count);
-  $form['document'] = array(
-	'#type' => 'textfield',
-	'#title' => t('Enter document number'),
-	'#required' => TRUE,
-	'#weight' => 1,
-  );
-  return $form; 
 }
 
 //формы
@@ -380,13 +328,13 @@ function docviewer_delete_confirm(&$form_state, $doc) {
     '#type' => 'value',
     '#value' => $doc->docid,
   );
-  if(user_access('delete own books')&&($doc->uid == $user->uid)) {
+  if(user_access(t('delete own books'))&&($doc->uid == $user->uid)) {
 	  $own = true;
   }
   else {
 	  $own = false;
   }
-  if (user_access('administer docviewer')||$own) {
+  if (user_access(t('administer docviewer'))||$own) {
     return confirm_form($form, t("Are you sure you want to delete the document <i>") . check_plain($doc->name) . '</i>?', 'docviewer', t('This action cannot be undone.'), t('Delete'), t('Cancel') );
   }
   else {
@@ -440,7 +388,7 @@ function _docviewer_resize($path, $width) {
 function docviewer_list($uid = FALSE) {
   $output = "";
   
-  if (user_access('add books')||user_access('administer docviewer')) $output .= drupal_get_form("docviewer_upload_form");
+  if (user_access(t('add books'))||user_access(t('administer docviewer'))) $output .= drupal_get_form("docviewer_upload_form");
   $output .= drupal_get_form('docviewer_list_filter', $uid);
   
   return $output; 
@@ -448,7 +396,7 @@ function docviewer_list($uid = FALSE) {
 
 //access check documents
 function docviewer_delete_document() {
-  if (user_access('administer docviewer')||user_access('delete own books')) return TRUE;
+  if (user_access(t('administer docviewer'))||user_access(t('delete own books'))) return TRUE;
   return FALSE;
 }
 
@@ -488,19 +436,9 @@ function docviewer_theme() {
 
 function docviewer_get_document($uid, $doc) {
   global $_source_dir;
-  
-  if (user_access("download books", $uid) && ($doc->download == 1)) {
-	header("Content-Type: application/octet-stream");
-	header("Content-Disposition: attachment; filename=\"". $doc->filename ."\";" );
-	readfile(realpath(file_directory_path() ."/". $_source_dir ."/". $doc->docid));
-  
-  }
-  else{
-	
-  }
-  
-  $out = t("You haven't permisson.");
-  return $out;
+  header("Content-Type: application/octet-stream");
+  header("Content-Disposition: attachment; filename=\"". $doc->filename ."\";" );
+  readfile(realpath(file_directory_path() ."/". $_source_dir ."/". $doc->docid));
 } 
 
 function docviewer_clear_form() {
@@ -673,7 +611,7 @@ function docviewer_edit_form_submit($form, &$form_state) {
 
 function docviewer_edit_access($doc) {
 	global $user;
-	if (($user->uid == $doc->uid)||(user_access('administer docviewer'))) return TRUE;
+	if (($user->uid == $doc->uid)||(user_access(t('administer docviewer')))) return TRUE;
 }
 
 function docviewer_viewer_preprocess(&$variables, $hook) {
@@ -777,10 +715,10 @@ function docviewer_list_filter(&$form_state, $uid) {
 	$data = array();
 	while ($row = db_fetch_object($query)) {
 		$actions = "";
-		if (user_access('read books')||user_access('administer docviewer')) {
+		if (user_access(t('read books'))||user_access(t('administer docviewer'))) {
 			$actions .= l(t('view'), 'books/'. $row->uid .'/'. $row->docid);
 		}
-		if (($row->download == 1)&&(user_access('download books'))) {
+		if (($row->download == 1)&&(user_access(t('download books')))) {
 			$actions .= '<br>';
 			$actions .= l(t('download'), 'books/'. $row->uid .'/'. $row->docid .'/get');
 		}
@@ -788,7 +726,7 @@ function docviewer_list_filter(&$form_state, $uid) {
 			$actions .= '<br>';
 			$actions .= l(t('edit'), 'books/'. $row->uid .'/'. $row->docid .'/edit');
 		}
-		if ((($user->uid == $row->uid)&&user_access('delete own books'))||user_access('administer docviewer')) {
+		if ((($user->uid == $row->uid)&&user_access(t('delete own books')))||user_access(t('administer docviewer'))) {
 			$actions .= '<br>'; 
 			$actions .= l(t('delete'), 'docviewer/'. $row->docid .'/delete', array('alias' => TRUE));
 		}
@@ -844,4 +782,13 @@ function docviewer_get_users_select() {
 		$objects[$row->uid] .= " ". check_plain(mb_substr($row->value, 0, 1)) .".";
   }
   return $objects;
+}
+
+function _perm_get_book($uid, $doc) {
+	if (user_access(t('download books'), $uid) && ($doc->download == 1)) {
+		return TRUE;
+	}
+	else{
+		return FALSE;
+	}
 }
