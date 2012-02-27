@@ -656,7 +656,6 @@ function docviewer_edit_form($form, $doc) {
 }
 
 function docviewer_edit_form_submit($form, &$form_state) {
-	$form_state['values']['name'] = check_plain($form_state['values']['name']);
 	$subject = ($form_state['values']['subject'] === t('Add own section...')) ? $form_state['values']['own_subject'] : $form_state['values']['subject'];
 	db_query("UPDATE {docviewer_documents} SET name='%s', download='%d', subject='%s' WHERE docid='%d'", $form_state['values']['name'], $form_state['values']['download'],  check_plain($subject), $form_state['values']['id']);
 	drupal_goto("/books");
@@ -785,9 +784,9 @@ function docviewer_list_filter(&$form_state, $uid) {
 		}
 		$data[] = array(
 			$row->docid,
-			$row->name,
-			$row->subject,
-			$row->uid,
+			check_plain($row->name),
+			check_plain($row->subject),
+			check_plain($row->uid),
 			$row->filesize,
 			$row->pages,
 			$actions,
@@ -816,20 +815,20 @@ function docviewer_get_users_select() {
   while ($row = db_fetch_object($query)) {
 		if (!isset($objects[$row->uid])) {
 			$objects[$row->uid] = $row->name;
-			if (!empty($row->value)) $objects[$row->uid] .= " - ". $row->value;
+			if (!empty($row->value)) $objects[$row->uid] .= " - ". check_plain($row->value);
 		}
   }
   ////get name
   $query = db_query("SELECT docs.uid, val.value FROM {docviewer_documents} AS docs LEFT JOIN {profile_values} AS val ON docs.uid=val.uid LEFT JOIN {profile_fields} AS profile ON val.fid=profile.fid WHERE profile.name='profile_name' AND docs.active=1");
   while ($row = db_fetch_object($query)) {
 	if (!empty($row->value))
-		$objects[$row->uid] .= " ". mb_substr($row->value, 0, 1) .". ";
+		$objects[$row->uid] .= " ". check_plain(mb_substr($row->value, 0, 1)) .". ";
   }
   ////get secondname
   $query = db_query("SELECT docs.uid,  val.value FROM {docviewer_documents} AS docs LEFT JOIN {profile_values} AS val ON docs.uid=val.uid LEFT JOIN {profile_fields} AS profile ON val.fid=profile.fid WHERE profile.name='profile_pname' AND docs.active=1");
   while ($row = db_fetch_object($query)) {
 	if (!empty($row->value))
-		$objects[$row->uid] .= " ". mb_substr($row->value, 0, 1) .".";
+		$objects[$row->uid] .= " ". check_plain(mb_substr($row->value, 0, 1)) .".";
   }
   return $objects;
 }
