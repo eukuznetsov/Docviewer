@@ -438,62 +438,10 @@ function _docviewer_resize($path, $width) {
  
  
 function docviewer_list($uid = FALSE) {
-  global $user;
   $output = "";
   
-  $perpage = 20;
-  
-  $header = array(
-  array('data' => 'Id', 'field' => 'docid'),
-  array('data' => t('Title'), 'field' => 'name'),
-  array('data' => t('Section'), 'field' => 'subject'),
-  array('data' =>  t('User'), 'field' => 'uid'),
-  array('data' => t('Size'), 'field' => 'filesize'),
-  array('data' => t('Pages'), 'field' => 'pages'), 
-  t('Actions')	
-  );
-  
   if (user_access('add books')||user_access('administer docviewer')) $output .= drupal_get_form("docviewer_upload_form");
-  $output .= drupal_get_form('docviewer_list_filter');
-  if ($uid === FALSE) {
-	$query = pager_query("SELECT * FROM {docviewer_documents} WHERE active=1 ". tablesort_sql($header), $perpage, 0, "SELECT COUNT(*) FROM {docviewer_documents} WHERE active=1");
-  }
-  if (is_numeric($uid->uid)) {
-	$sql = "SELECT * FROM {docviewer_documents} WHERE uid=%d AND active=1". tablesort_sql($header);
-	$sql_count = "SELECT COUNT(*) FROM {docviewer_documents} WHERE active=1";
-	$query = pager_query($sql, $perpage, 0, $sql_count, $uid->uid);
-  }
-
-  $data = array();
-  while ($row = db_fetch_object($query)) {
-	$actions = "";
-	if (user_access('read books')||user_access('administer docviewer')) {
-	  $actions .= l(t('view'), 'books/'. $row->uid .'/'. $row->docid);
-    }
-    if (($row->download == 1)&&(user_access('download books'))) {
-	  $actions .= '<br>';
-	  $actions .= l(t('download'), 'books/'. $row->uid .'/'. $row->docid .'/get');
-	}
-	if (docviewer_edit_access($row)) {
-	  $actions .= '<br>';
-	  $actions .= l(t('edit'), 'books/'. $row->uid .'/'. $row->docid .'/edit');
-	}
-	if ((($user->uid == $row->uid)&&user_access('delete own books'))||user_access('administer docviewer')) {
-	  $actions .= '<br>'; 
-      $actions .= l(t('delete'), 'docviewer/'. $row->docid .'/delete', array('alias' => TRUE));
-	}
-    $data[] = array(
-      $row->docid,
-      $row->name,
-      $row->subject,
-      $row->uid,
-      $row->filesize,
-      $row->pages,
-      $actions,
-    );
-  }
-  $output .= theme_table($header, $data);
-  $output .= theme('pager');
+  $output .= drupal_get_form('docviewer_list_filter', $uid);
   return $output; 
 } 
 
@@ -737,7 +685,8 @@ function _subject_validate($element, $form_state) {
 	}
 }
 
-function docviewer_list_filter(&$form_state) {
+function docviewer_list_filter(&$form_state, $uid) {
+	global $user;
 	$form = array();
 	
 	$users = docviewer_get_users_select();
@@ -745,34 +694,111 @@ function docviewer_list_filter(&$form_state) {
 	$sections['all'] = t('All');
 	$users['all'] = t('All');
 	
-	$form['filter'] = array(
-	'#type' => 'fieldset',
-	'#collapsible' => TRUE,
-	'#collapsed' => FALSE,
-	'#title' => t('Filter'),
+	if ($user->uid > 0) {
+		$form['filter'] = array(
+		'#type' => 'fieldset',
+		'#collapsible' => TRUE,
+		'#collapsed' => FALSE,
+		'#title' => t('Filter'),
+		);
+		$form['filter']['fields'] = array(
+			'#prefix' => '<div class="container-inline">',
+			'#suffix' => '</div>',
+		);
+		$form['filter']['fields']['section'] = array(
+		'#type' => 'select',
+		'#title' => t('Section'),
+		'#required' => FALSE,
+		'#options' => $sections,
+		'#default_value' => (isset($form_state['storage']['section'])) ? $form_state['storage']['section'] : t('all'),
+		);
+		$form['filter']['fields']['user'] = array(
+		'#type' => 'select',
+		'#title' => t('User'),
+		'#required' => FALSE,
+		'#options' => $users,
+		'#default_value' => (isset($form_state['storage']['user'])) ? $form_state['storage']['user'] : t('all'),
+		);
+		$form['filter']['submit'] = array(
+	    '#type' => 'submit',
+	    '#value' => t('Apply'),
+	    '#validate' => array('docviewer_filter_validate'),
+		);
+	}
+	
+	$perpage = 20;
+  
+	$header = array(
+	array('data' => 'Id', 'field' => 'docid'),
+	array('data' => t('Title'), 'field' => 'name'),
+	array('data' => t('Section'), 'field' => 'subject'),
+	array('data' =>  t('User'), 'field' => 'uid'),
+	array('data' => t('Size'), 'field' => 'filesize'),
+	array('data' => t('Pages'), 'field' => 'pages'), 
+	t('Actions')	
 	);
-	$form['filter']['fields'] = array(
-		'#prefix' => '<div class="container-inline">',
-		'#suffix' => '</div>',
-	);
-	$form['filter']['fields']['section'] = array(
-	'#type' => 'select',
-	'#title' => t('Section'),
-	'#required' => FALSE,
-	'#options' => $sections,
-	'#default_value' => t('All'),
-	);
-	$form['filter']['fields']['user'] = array(
-	'#type' => 'select',
-	'#title' => t('User'),
-	'#required' => FALSE,
-	'#options' => $users,
-	'#default_value' => t('All'),
-	);
-	$form['filter']['submit'] = array(
-    '#type' => 'submit',
-    '#value' => t('Apply'),
-    '#validate' => array('docviewer_filter_validate'),
+	
+	//generate table
+	$list = "";
+	
+	//build query
+	$sql_end = "FROM {docviewer_documents} WHERE active=1";
+	
+	$sql_q = "SELECT COUNT(*) ";
+	$sql_all = "SELECT * ";
+
+	//get user for condition
+	if(is_numeric($uid->uid)) {
+		$sql_end .= " AND uid='". $uid->uid ."'";
+	}elseif(isset($form['filter']['fields']['user']['#default_value']) && ($form['filter']['fields']['user']['#default_value'] != t('all'))){
+		$sql_end .= " AND uid='". $form['filter']['fields']['user']['#default_value'] ."'";
+	}
+	
+	//get section for condition
+	if(isset($form['filter']['fields']['section']['#default_value']) && ($form['filter']['fields']['section']['#default_value'] != t('all'))){
+		$sql_end .= " AND subject='". $form['filter']['fields']['section']['#default_value'] ."'";
+	}	
+	
+	$sql_end .= " ". tablesort_sql($header);
+
+	$sql = $sql_all . $sql_middle . $sql_end;
+	$sql_count = $sql_q . $sql_middle . $sql_end;
+		
+	$query = pager_query($sql, $perpage, 0, $sql_count);
+	$data = array();
+	while ($row = db_fetch_object($query)) {
+		$actions = "";
+		if (user_access('read books')||user_access('administer docviewer')) {
+			$actions .= l(t('view'), 'books/'. $row->uid .'/'. $row->docid);
+		}
+		if (($row->download == 1)&&(user_access('download books'))) {
+			$actions .= '<br>';
+			$actions .= l(t('download'), 'books/'. $row->uid .'/'. $row->docid .'/get');
+		}
+		if (docviewer_edit_access($row)) {
+			$actions .= '<br>';
+			$actions .= l(t('edit'), 'books/'. $row->uid .'/'. $row->docid .'/edit');
+		}
+		if ((($user->uid == $row->uid)&&user_access('delete own books'))||user_access('administer docviewer')) {
+			$actions .= '<br>'; 
+			$actions .= l(t('delete'), 'docviewer/'. $row->docid .'/delete', array('alias' => TRUE));
+		}
+		$data[] = array(
+			$row->docid,
+			$row->name,
+			$row->subject,
+			$row->uid,
+			$row->filesize,
+			$row->pages,
+			$actions,
+		);
+	}
+	$list .= theme_table($header, $data);
+	$list .= theme('pager');
+	
+	$form['list'] = array(
+		'#type' => 'markup',
+		'#value' => $list,
 	);
 	return $form;
 }
