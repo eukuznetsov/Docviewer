@@ -356,12 +356,15 @@ function docviewer_get_page($uid, $doc, $page) {
   global $_cache_dir;
   if (preg_match("/^page-0*([0-9]+)$/i", $page, $matches) == 1) {
     $page = $matches[1];
+    $zeros_q = 0;
     $zeros = "";
-    for ($i = 0; $i<(strlen($doc->pages)-strlen($page)); $i++) $zeros .= "0";
-      if (($page <= $doc->pages)&&($page > 0)) {
-        header("Content-Type: image/png");
-        readfile(realpath(file_directory_path() ."/". $_cache_dir ."/". $doc->docid ."/page-". $zeros . $page .".png"));
-      }
+    for ($i = 0; $i<(strlen($doc->pages)-strlen($page)); $i++) $zeros_q++;
+    if (strlen($doc->pages) > strlen($doc->pages-1)) $zeros_q--;
+    for ($i = 0; $i<$zeros_q; $i++) $zeros .= "0";
+    if (($page <= $doc->pages)&&($page > 0)) {
+      header("Content-Type: image/png");
+      readfile(realpath(file_directory_path() ."/". $_cache_dir ."/". $doc->docid ."/page-". $zeros . $page .".png"));
+    }
   }
   drupal_goto();
 } 
