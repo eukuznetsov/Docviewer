@@ -97,7 +97,7 @@ function docviewer_upload_form() {
   if (($_SERVER['CONTENT_LENGTH'])&&(parse_size(ini_get("post_max_size")) < $_SERVER['CONTENT_LENGTH'])) {
     drupal_set_message(t("File size is larger than allowed."), 'error');
   }
-   $form['subj'] = array(
+  $form['subj'] = array(
 	'#type' => 'fieldset',
 	'#title' => t('Upload file'),
 	'#collapsible' => TRUE,
@@ -119,13 +119,14 @@ function docviewer_upload_form() {
   '#collapsed' => FALSE,
   '#prefix' => "<div class='container-inline'>",
   '#suffix' => '</div>',
-	'#element_validate' => array('_subject_validate'),
+  '#element_validate' => array('_subject_validate'),
   );
   $form['subj']['section']['subject'] = array(
 	'#type' => 'select',
 	'#title' => t('Section'),
 	'#required' => TRUE,
 	'#options' => $objects,
+	'#default_value' => t('Add own section...'),
   );
   $form['subj']['section']['own_subject'] = array(
 	'#type' => 'textfield',
@@ -138,7 +139,7 @@ function docviewer_upload_form() {
   );
   $form['subj']['max_filesize'] = array(
     '#type' => 'markup',
-    '#value' => "<div><b>Max file size:</b> ". (file_upload_max_size()/1024/1024) .'MB</div>',
+    '#value' => "<div><b>Max file size:</b> ". (file_upload_max_size()/1024/1024) .'mB</div>',
   );
   $form['subj']['download'] = array(
 	'#type' => 'checkbox',
@@ -640,7 +641,17 @@ function docviewer_list_filter(&$form_state, $uid) {
 	$sections = docviewer_get_objects_select();
 	$sections['all'] = t('All');
 	$users['all'] = t('All');
-	
+		 
+	 $form['mark'] = array(
+	 '#type' => 'markup',
+	 '#value' => '<style type="text/css">
+	 #edit-section-wrapper {display:inline-block;width:45%}
+	 #edit-user-wrapper {display:inline-block;width:30%}
+	 #edit-submit-1 {display:inline-block;width:23%}
+	 .form-select {width:100%}
+	 </style>',
+	 );
+  
 	if ($user->uid > 0) {
 		$form['filter'] = array(
 		'#type' => 'fieldset',
@@ -658,7 +669,7 @@ function docviewer_list_filter(&$form_state, $uid) {
 		'#required' => FALSE,
 		'#options' => $sections,
 		'#default_value' => (isset($form_state['storage']['section'])) ? $form_state['storage']['section'] : t('all'),
-		);
+		); 
 		$form['filter']['fields']['user'] = array(
 		'#type' => 'select',
 		'#title' => t('User'),
@@ -666,7 +677,7 @@ function docviewer_list_filter(&$form_state, $uid) {
 		'#options' => $users,
 		'#default_value' => (isset($form_state['storage']['user'])) ? $form_state['storage']['user'] : t('all'),
 		);
-		$form['filter']['submit'] = array(
+		$form['filter']['fields']['submit'] = array(
 	    '#type' => 'submit',
 	    '#value' => t('Apply'),
 	    '#validate' => array('docviewer_filter_validate'),
