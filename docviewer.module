@@ -651,7 +651,7 @@ function docviewer_list_filter(&$form_state, $uid) {
 	 #edit-section-wrapper {display:inline-block;width:45%}
 	 #edit-user-wrapper {display:inline-block;width:30%}
 	 #edit-submit-1 {display:inline-block;width:23%}
-	 .form-select {width:100%}
+	 #filter .form-select {width:100%}
 	 </style>',
 	 );
   
@@ -663,7 +663,7 @@ function docviewer_list_filter(&$form_state, $uid) {
 		'#title' => t('Filter'),
 		);
 		$form['filter']['fields'] = array(
-			'#prefix' => '<div class="container-inline">',
+			'#prefix' => '<div class="container-inline" id="filter">',
 			'#suffix' => '</div>',
 		);
 		$form['filter']['fields']['section'] = array(
