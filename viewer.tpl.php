@@ -158,7 +158,7 @@ function() {
 
 <div class="item-list"><ul class="pager">
 <li class="pager-first first" id="page_first"><a href="#page_1" title="В начало" class="active">«</a></li>
-<li><a class="pager_prev" href="#" title="На предыдущую страницу" class="active">&lt;</a></li>
+<li><a class="pager_prev" href="#" title="На предыдущую страницу" class="active">‹</a></li>
 <?php
 $page_count = $document->pages; 
 

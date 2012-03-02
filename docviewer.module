@@ -253,7 +253,7 @@ function _docviewer_upload_doc($form, &$form_state) {
     return $status;
   }
   $result = db_query("SELECT docid FROM {docviewer_documents} WHERE md5sum='%s'", $md5sum);
-  //не удалось узнать id только что созданного документа
+  //не удалось узнать id только что поисксозданного документа
   if (!$result) {
     form_set_error('upload', t("Database error."));
     $status['error'] = 3; 
