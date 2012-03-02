@@ -144,6 +144,7 @@ function docviewer_upload_form() {
   $form['subj']['download'] = array(
 	'#type' => 'checkbox',
 	'#title' => t('Allow to download'),
+	'#dafault_value' => TRUE,
   );
   $form['subj']['submit'] = array(
     '#type' => 'submit',
