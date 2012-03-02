@@ -24,6 +24,80 @@ var c_id = document.getElementById( "page_counter" );
 $(
 function() {
 	
+	var viewer = $('#viewer');
+	var imgs = $('#viewer img');
+	
+	imgs.each(function(){$(this).click(); return false});
+	
+	(function(){
+ 
+    var special = jQuery.event.special,
+        uid1 = 'D' + (+new Date()),
+        uid2 = 'D' + (+new Date() + 1);
+ 
+    special.scrollstart = {
+        setup: function() {
+ 
+            var timer,
+                handler =  function(evt) {
+ 
+                    var _self = this,
+                        _args = arguments;
+ 
+                    if (timer) {
+                        clearTimeout(timer);
+                    } else {
+                        evt.type = 'scrollstart';
+                        jQuery.event.handle.apply(_self, _args);
+                    }
+ 
+                    timer = setTimeout( function(){
+                        timer = null;
+                    }, special.scrollstop.latency);
+ 
+                };
+ 
+            jQuery(this).bind('scroll', handler).data(uid1, handler);
+ 
+        },
+        teardown: function(){
+            jQuery(this).unbind( 'scroll', jQuery(this).data(uid1) );
+        }
+    };
+ 
+    special.scrollstop = {
+        latency: 500,
+        setup: function() {
+ 
+            var timer,
+                    handler = function(evt) {
+ 
+                    var _self = this,
+                        _args = arguments;
+ 
+                    if (timer) {
+                        clearTimeout(timer);
+                    }
+ 
+                    timer = setTimeout( function(){
+ 
+                        timer = null;
+                        evt.type = 'scrollstop';
+                        jQuery.event.handle.apply(_self, _args);
+ 
+                    }, special.scrollstop.latency);
+ 
+                };
+ 
+            jQuery(this).bind('scroll', handler).data(uid2, handler);
+ 
+        },
+        teardown: function() {
+            jQuery(this).unbind( 'scroll', jQuery(this).data(uid2) );
+        }
+    };
+})();
+	
 	$('#page_counter').change(function(){
 		var addr = "<?php print $GLOBALS['base_root'] . request_uri(); ?>";
 		if(isNumber($('#page_counter').val())&&(Math.floor($('#page_counter').val())>0)&&(Math.floor($('#page_counter').val())<=<?php print $document->pages; ?>)) {
@@ -34,8 +108,35 @@ function() {
 			$('#page_counter').addClass('error');
 		}
 		});
+	
+	var addr="<?php print $GLOBALS['base_root'] . request_uri();?>";
+	
+	viewer.bind('scrollstop', function(){
+		$('#viewer img').each(function(){
+				if($(this).offset().top>=viewer.offset().top){
+					$(this).click();
+					return false;
+				}
+			});
+		});
+		
+	$('#pager_last').unbind('click').click(function(){$('#page_<?php print $document->pages;?>').click(); window.location="<?php print $GLOBALS['base_root'] . request_uri() ."#page_". $document->pages?>";});
+	
+	$('#pager_next').unbind('click').click(function(event){
+		event.preventDefault();
+		var addr="<?php print $GLOBALS['base_root'] . request_uri();?>";
+		imgs.each(function() {
+			if($(this).attr('id')=='page_<?php print $document->pages; ?>') return false;
+			if($(this).offset().top>=viewer.offset().top){
+				var id=$(this).attr('id').replace(/[^0-9]*/g, '');
+				window.location=addr+"#page_"+(parseInt(id)+1);
+				return false;
+			};
+		});
+	});
 		
 });
+
 </script>
 
 
@@ -64,11 +165,11 @@ for ($pager_no = $pager_dec; $pager_no <= $page_count; $pager_no += $pager_dec) 
   echo '</a></li>';
 }
 ?>
-<li class="pager-next"><a href="#" title="На следующую страницу" class="active">›</a></li>
-<li class="pager-last last"><a href="#page_last" title="В конец" class="active">»</a></li>
+<li><a id="pager_next" href="#" title="На следующую страницу" class="active">›</a></li>
+<li><a id="pager_last" href="#page_last" title="В конец" class="active">»</a></li>
 </ul></div>
 
-    <div class="scrolling-area" style="overflow:auto; width:754px; height:500px; border-style: solid;  border-width: 1px; border-color: rgb(212, 212, 212); color: rgb(15, 15, 15);">
+    <div id="viewer" class="scrolling-area" style="overflow:auto; width:754px; height:500px; border-style: solid;  border-width: 1px; border-color: rgb(212, 212, 212); color: rgb(15, 15, 15);">
     <span>
 <!-- p id="page_first" -->
 <table border="1" bgcolor="silver" style="cursor: pointer;">
