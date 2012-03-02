@@ -120,9 +120,9 @@ function() {
 			});
 		});
 		
-	$('#pager_last').unbind('click').click(function(){$('#page_<?php print $document->pages;?>').click(); window.location="<?php print $GLOBALS['base_root'] . request_uri() ."#page_". $document->pages?>";});
+	$('.pager_last').unbind('click').click(function(event){event.preventDefault();$('#page_<?php print $document->pages;?>').click(); window.location="<?php print $GLOBALS['base_root'] . request_uri() ."#page_". $document->pages?>";});
 	
-	$('#pager_next').unbind('click').click(function(event){
+	$('.pager_next').unbind('click').click(function(event){
 		event.preventDefault();
 		var addr="<?php print $GLOBALS['base_root'] . request_uri();?>";
 		imgs.each(function() {
@@ -130,6 +130,19 @@ function() {
 			if($(this).offset().top>=viewer.offset().top){
 				var id=$(this).attr('id').replace(/[^0-9]*/g, '');
 				window.location=addr+"#page_"+(parseInt(id)+1);
+				return false;
+			};
+		});
+	});
+	
+	$('.pager_prev').unbind('click').click(function(event){
+		event.preventDefault();
+		var addr="<?php print $GLOBALS['base_root'] . request_uri();?>";
+		imgs.each(function() {
+			if($(this).offset().top>=viewer.offset().top){
+				if($(this).attr('id')=='page_1') return false;
+				var id=$(this).attr('id').replace(/[^0-9]*/g, '');
+				window.location=addr+"#page_"+(parseInt(id)-1);
 				return false;
 			};
 		});
@@ -144,7 +157,7 @@ function() {
   <div class="resizable-area" style="border-bottom-style:none; border-width:1px; border-color: rgb(212, 212, 212);">
 
 <div class="item-list"><ul class="pager">
-<li class="pager-first first" id="page_first"><a href="#page_first" title="В начало" class="active">«</a></li>
+<li class="pager-first first" id="page_first"><a href="#page_1" title="В начало" class="active">«</a></li>
 <?php
 $page_count = $document->pages; 
 
@@ -165,8 +178,8 @@ for ($pager_no = $pager_dec; $pager_no <= $page_count; $pager_no += $pager_dec) 
   echo '</a></li>';
 }
 ?>
-<li><a id="pager_next" href="#" title="На следующую страницу" class="active">›</a></li>
-<li><a id="pager_last" href="#page_last" title="В конец" class="active">»</a></li>
+<li><a class="pager_next" href="#" title="На следующую страницу" class="active">›</a></li>
+<li><a class="pager_last" href="#page_last" title="В конец" class="active">»</a></li>
 </ul></div>
 
     <div id="viewer" class="scrolling-area" style="overflow:auto; width:754px; height:500px; border-style: solid;  border-width: 1px; border-color: rgb(212, 212, 212); color: rgb(15, 15, 15);">
@@ -207,8 +220,8 @@ if ($user->uid<1){
   <div class="bottom-area" style="overflow:auto; width:754px; height:50px; padding: 4px; border-top-style:none; border-width:1px; border-color: rgb(212, 212, 212);">
 
     <div style="width: 752px; height: 20px;">
-    Страница:&nbsp;<b>|<a href="#page_first" title="Начало" class="active">&lt;&lt;</a>&nbsp;&nbsp;&lt;&nbsp;<input class="page_counter" value="1" type="text"
-    style="width: 40px; height: 14px; margin-left: 3px; text-align: center;" id="page_counter">&nbsp;&gt;&nbsp;&nbsp;<a href="#page_last" title="Конец" class="active">&gt;&gt;</a>|</b>
+    Страница:&nbsp;<b>|<a href="#page_1" title="Начало" class="active">&lt;&lt;</a><a href="#" class="pager_prev">&nbsp;&nbsp;&lt;&nbsp;</a><input class="page_counter" value="1" type="text"
+    style="width: 40px; height: 14px; margin-left: 3px; text-align: center;" id="page_counter"><a href="#" class="pager_next">&nbsp;&gt;&nbsp;&nbsp;</a><a class="pager_last" href="#page_last" title="Конец" class="active">&gt;&gt;</a>|</b>
     </div>
 
   </div>
