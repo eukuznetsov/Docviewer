@@ -158,6 +158,7 @@ function() {
 
 <div class="item-list"><ul class="pager">
 <li class="pager-first first" id="page_first"><a href="#page_1" title="В начало" class="active">«</a></li>
+<li><a class="pager_prev" href="#" title="На предыдущую страницу" class="active">&lt;</a></li>
 <?php
 $page_count = $document->pages; 
 
@@ -220,8 +221,8 @@ if ($user->uid<1){
   <div class="bottom-area" style="overflow:auto; width:754px; height:50px; padding: 4px; border-top-style:none; border-width:1px; border-color: rgb(212, 212, 212);">
 
     <div style="width: 752px; height: 20px;">
-    Страница:&nbsp;<b>|<a href="#page_1" title="Начало" class="active">&lt;&lt;</a><a href="#" class="pager_prev">&nbsp;&nbsp;&lt;&nbsp;</a><input class="page_counter" value="1" type="text"
-    style="width: 40px; height: 14px; margin-left: 3px; text-align: center;" id="page_counter"><a href="#" class="pager_next">&nbsp;&gt;&nbsp;&nbsp;</a><a class="pager_last" href="#page_last" title="Конец" class="active">&gt;&gt;</a>|</b>
+    Страница:&nbsp;<b>|<a href="#page_1" title="Начало" class="active">&lt;&lt;</a>&nbsp;&nbsp;<a href="#" class="pager_prev" title="Предыдущая страница">&nbsp;&nbsp;&lt;&nbsp;</a>&nbsp;<input title="Введите номер страницы" class="page_counter" value="1" type="text"
+    style="width: 40px; height: 14px; margin-left: 3px; text-align: center;" id="page_counter">&nbsp;<a href="#" class="pager_next" title="Следующая страница" >&nbsp;&nbsp;&gt;&nbsp;&nbsp;</a>&nbsp;&nbsp;<a class="pager_last" href="#page_last" title="Конец" class="active">&gt;&gt;</a>|</b>
     </div>
 
   </div>
