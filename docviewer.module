@@ -253,7 +253,7 @@ function _docviewer_upload_doc($form, &$form_state) {
     return $status;
   }
   $result = db_query("SELECT docid FROM {docviewer_documents} WHERE md5sum='%s'", $md5sum);
-  //не удалось узнать id только что поисксозданного документа
+  //не удалось узнать id только что созданного документа
   if (!$result) {
     form_set_error('upload', t("Database error."));
     $status['error'] = 3; 
@@ -564,6 +564,13 @@ function docviewer_edit_form($form, $doc) {
 	$objects = docviewer_get_objects_select();
 	$objects[t('Add own section...')] = t('Add own section...');
 	
+	$query = db_query("SELECT subject FROM {docviewer_documents} WHERE docid='%d'", $doc->docid);
+	if ($result = db_fetch_object($query)) {
+		$default_object = $result->subject;
+	}else{
+		$default_object = "";
+	}
+	
 	$form = array();
 	$form['id'] = array(
 		'#type' => 'hidden',
@@ -589,6 +596,7 @@ function docviewer_edit_form($form, $doc) {
 	'#title' => t('Section'),
 	'#required' => TRUE,
 	'#options' => $objects,
+	'#default_value' => $default_object,
 	);
 	$form['section']['own_subject'] = array(
 	'#type' => 'textfield',

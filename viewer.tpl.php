@@ -19,6 +19,7 @@ var c_id = document.getElementById( "page_counter" );
   book_img.src = $url_img;
   c_id.value = $p_num;
   book_img.width = 720;
+  $('#page_counter').removeClass('error');
 }
 
 $(
@@ -195,7 +196,7 @@ if ($user->uid<1){
 
   for ($page_no=1; $page_no<=$document->pages; $page_no++) {
   echo '<tr><td>';
-  echo '  <p><img align="left" src="'. base_path() . drupal_get_path('module', 'docviewer') .'/list-page.png" width="150px" id="page_';
+  echo '  <p><img style="float:left" src="'. base_path() . drupal_get_path('module', 'docviewer') .'/list-page.png" width="150px" id="page_';
   echo $page_no;
   echo '"';
   echo '  onClick="load_img(this,';
@@ -204,7 +205,7 @@ if ($user->uid<1){
   echo ')" onMouseOver="load_img(this,';
   echo "'". url("books/". $uid->uid ."/". $document->docid ."/page-". $page_no) ."',";
   echo $page_no;
-  echo ')"><div width="100%"><h4 align="center" class="page_no">'. $page_no .'</h4></div>';
+  echo ')"><div width="100%"><h5 align="center" class="page_no">'. $page_no .'</h5></div>';
   echo '</td></tr>';
   }
 }
