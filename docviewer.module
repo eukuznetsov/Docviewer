@@ -659,7 +659,7 @@ function docviewer_list_filter(&$form_state, $uid) {
 	 '#value' => '<style type="text/css">
 	 #edit-section-wrapper {display:inline-block;width:45%}
 	 #edit-user-wrapper {display:inline-block;width:30%}
-	 #edit-submit-1 {display:inline-block;width:23%}
+	 .submit-filter {display:inline-block;width:23%}
 	 #filter .form-select {width:100%}
 	 </style>',
 	 );
@@ -691,6 +691,7 @@ function docviewer_list_filter(&$form_state, $uid) {
 		);
 		$form['filter']['fields']['submit'] = array(
 	    '#type' => 'submit',
+      '#attributes' => array("class"=>"submit-filter"),
 	    '#value' => t('Apply'),
 	    '#validate' => array('docviewer_filter_validate'),
 		);
